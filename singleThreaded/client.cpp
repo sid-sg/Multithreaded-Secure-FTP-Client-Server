@@ -9,6 +9,9 @@
 #include <sys/sendfile.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <thread>
+#include <chrono>
+#include "./include/progressbar.hpp"
 
 #define PORT 7000
 #define SERVER_IP "127.0.0.1"
@@ -151,8 +154,29 @@ int main(){
                 continue;
             }
 
+            int totalSteps = 100;
+            ProgressBar progressBar(totalSteps);
+            off_t totalBytesSent = 0; 
+            off_t bytesRemaining = filesize; 
+            const size_t chunkSize = 4096; 
 
-            bytesSent = sendfile(sockfd, filefd, NULL, filesize);
+            while (bytesRemaining>0) {
+                size_t remaining = std::min(chunkSize, static_cast<size_t>(bytesRemaining) );
+                bytesSent = sendfile(sockfd, filefd, &totalBytesSent, remaining);
+                if (bytesSent == -1) {
+                    std::cerr << "failed sending file: " << std::strerror(errno) << "\n";
+                    close(filefd);
+                    break;
+                }
+
+                bytesRemaining -= bytesSent;
+
+                int progress = static_cast<int>( (static_cast<float>(totalBytesSent) / filesize )* 100 );
+                progress = std::min(progress, totalSteps);                
+                progressBar.update(progress);
+            }
+
+            std::cout<<"\n";
 
             if( bytesSent == -1){
                 std::cerr<< "failed sending file: "<<std::strerror(errno)<<"\n";
