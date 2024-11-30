@@ -1,0 +1,87 @@
+desc: (none)
+cmd: ./server
+time_unit: i
+#-----------
+snapshot=0
+#-----------
+time=0
+mem_heap_B=0
+mem_heap_extra_B=0
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=1
+#-----------
+time=2360491
+mem_heap_B=72704
+mem_heap_extra_B=8
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=2
+#-----------
+time=2472647
+mem_heap_B=73728
+mem_heap_extra_B=16
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=3
+#-----------
+time=2485983
+mem_heap_B=73752
+mem_heap_extra_B=32
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=4
+#-----------
+time=2488865
+mem_heap_B=74040
+mem_heap_extra_B=40
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=5
+#-----------
+time=2508434
+mem_heap_B=106856
+mem_heap_extra_B=48
+mem_stacks_B=0
+heap_tree=empty
+#-----------
+snapshot=6
+#-----------
+time=2508791
+mem_heap_B=106856
+mem_heap_extra_B=48
+mem_stacks_B=0
+heap_tree=peak
+n3: 106856 (heap allocation functions) malloc/new/new[], --alloc-fns, etc.
+ n1: 72704 0x4919939: ??? (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+  n1: 72704 0x400647D: call_init.part.0 (dl-init.c:70)
+   n1: 72704 0x4006567: call_init (dl-init.c:33)
+    n1: 72704 0x4006567: _dl_init (dl-init.c:117)
+     n0: 72704 0x40202C9: ??? (in /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2)
+ n1: 32816 0x4BA130A: __alloc_dir (opendir.c:115)
+  n1: 32816 0x4BA130A: opendir_tail (opendir.c:63)
+   n1: 32816 0x4BA130A: opendir (opendir.c:86)
+    n1: 32816 0x10BAD1: ls(std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> >) (in /home/sid/projects/chatapp/multiThreaded/server)
+     n1: 32816 0x10BF71: clientHandler(int) (in /home/sid/projects/chatapp/multiThreaded/server)
+      n1: 32816 0x10DEE3: void std::__invoke_impl<void, void (*)(int), int>(std::__invoke_other, void (*&&)(int), int&&) (in /home/sid/projects/chatapp/multiThreaded/server)
+       n1: 32816 0x10DE46: std::__invoke_result<void (*)(int), int>::type std::__invoke<void (*)(int), int>(void (*&&)(int), int&&) (in /home/sid/projects/chatapp/multiThreaded/server)
+        n1: 32816 0x10DDA6: void std::thread::_Invoker<std::tuple<void (*)(int), int> >::_M_invoke<0ul, 1ul>(std::_Index_tuple<0ul, 1ul>) (in /home/sid/projects/chatapp/multiThreaded/server)
+         n1: 32816 0x10DD5B: std::thread::_Invoker<std::tuple<void (*)(int), int> >::operator()() (in /home/sid/projects/chatapp/multiThreaded/server)
+          n1: 32816 0x10DD3B: std::thread::_State_impl<std::thread::_Invoker<std::tuple<void (*)(int), int> > >::_M_run() (in /home/sid/projects/chatapp/multiThreaded/server)
+           n1: 32816 0x494B252: ??? (in /usr/lib/x86_64-linux-gnu/libstdc++.so.6.0.30)
+            n1: 32816 0x4B4FAC2: start_thread (pthread_create.c:442)
+             n0: 32816 0x4BE0A03: clone (clone.S:100)
+ n0: 1336 in 3 places, all below massif's threshold (1.00%)
+#-----------
+snapshot=7
+#-----------
+time=2508791
+mem_heap_B=74040
+mem_heap_extra_B=40
+mem_stacks_B=0
+heap_tree=empty
