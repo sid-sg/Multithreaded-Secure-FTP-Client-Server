@@ -1,3 +1,5 @@
-./store
+store
 server
 client
+threadpool
+.vscode
