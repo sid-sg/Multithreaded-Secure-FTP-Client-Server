@@ -10,7 +10,6 @@
 #include <cerrno>
 #include <cstring>
 #include <iostream>
-#include <thread>
 
 #include "./include/threadpool.hpp"
 
@@ -130,8 +129,7 @@ void clientHandler(int clientfd) {
             while (remaining > 0) {
                 bytesRecv = recv(clientfd, buffer, std::min(remaining, BUFFER_SIZE), 0);
                 if (bytesRecv <= 0) {
-                    std::cerr << "Client disconnected while transferring file: "
-                              << std::strerror(errno) << "\n";
+                    std::cerr << "Client disconnected while transferring file: " << std::strerror(errno) << "\n";
                     close(filefd);
                     break;
                 }
@@ -168,8 +166,7 @@ int main() {
 
     int yes = 1;
 
-    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) ==
-        -1) {  // to avoid "port already in use" error
+    if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) == -1) {  // to avoid "port already in use" error
         std::cerr << "setsockopt() failed: " << std::strerror(errno) << "\n";
         close(sockfd);
         return 1;
@@ -192,7 +189,7 @@ int main() {
     struct sockaddr_in clientAddr;
     socklen_t clientAddrSize = sizeof(clientAddr);
 
-    Threadpool pool(4);
+    Threadpool pool(8);
 
     while (1) {
         int clientfd = accept(sockfd, (struct sockaddr*)&clientAddr,
@@ -203,11 +200,11 @@ int main() {
             continue;
         }
 
-        std::cout << "client connected: Address=" << inet_ntoa(clientAddr.sin_addr)
-                  << " Port=" << ntohs(clientAddr.sin_port) << "\n";
+        std::cout << "client connected: Address=" << inet_ntoa(clientAddr.sin_addr) << " Port=" << ntohs(clientAddr.sin_port) << "\n";
 
         // std::thread (clientHandler, clientfd).detach ();
-        pool.enqueueTask([clientfd] { clientHandler(clientfd); });
+        // pool.enqueueTask([clientfd]() { clientHandler(clientfd); });
+        pool.enqueueTask(clientHandler, clientfd);
     }
 
     close(sockfd);

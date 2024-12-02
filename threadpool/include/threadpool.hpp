@@ -3,6 +3,7 @@
 
 #include <condition_variable>
 #include <functional>
+#include <future>
 #include <iostream>
 #include <mutex>
 #include <queue>
@@ -20,8 +21,10 @@ class Threadpool {
 
    public:
     explicit Threadpool(int numThreads);
-    void enqueueTask(std::function<void()> func);
     ~Threadpool();
+
+    template <typename F, typename... Args>
+    auto enqueueTask(F&& func, Args&&... args) -> std::future<decltype(func(args...))>;
 };
 
 Threadpool::Threadpool(int numThreads) : numThreads(numThreads), stop(false) {
@@ -57,12 +60,24 @@ Threadpool::~Threadpool() {
     }
 }
 
-void Threadpool::enqueueTask(std::function<void()> func) {
+template <typename F, typename... Args>
+auto Threadpool::enqueueTask(F&& func, Args&&... args) -> std::future<decltype(func(args...))> {
+
+    using returnType = decltype(func(args...));
+    using taskType = std::packaged_task<returnType()>;
+    auto boundTask = std::bind(std::forward<F>(func), std::forward<Args>(args)...);
+    auto task = std::make_shared<taskType>(std::move(boundTask));
+
+    std::future<returnType> result = task->get_future();
+
     std::unique_lock<std::mutex> lock(mtx);
-    tasks.push(func);
+    tasks.emplace([task]() -> void { 
+        (*task)(); 
+    });
 
     lock.unlock();
     cv.notify_one();
+    return result;
 }
 
 #endif
