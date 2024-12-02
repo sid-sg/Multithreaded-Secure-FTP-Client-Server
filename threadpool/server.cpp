@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include <zlib.h>
 
 #include <cerrno>
 #include <cstring>
@@ -95,8 +96,7 @@ void clientHandler(int clientfd) {
             }
             std::cout << "Sent directory files to client\n";
         } else if (option == "upload") {
-            bytesRecv = recv(clientfd, buffer, sizeof(buffer),
-                             0);  // recv file metadata (filename:filesize)
+            bytesRecv = recv(clientfd, buffer, sizeof(buffer),0);  // recv file metadata (filename:filesize)
             if (bytesRecv <= 0) {
                 std::cerr << "client disconnected: " << std::strerror(errno) << "\n";
                 break;
@@ -117,29 +117,37 @@ void clientHandler(int clientfd) {
                 break;
             }
 
-            std::string filepath = folderdir + "/" + filename;
+            // std::string filepath = folderdir + "/" + filename;
 
-            int filefd = open(filepath.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
-            if (filefd == -1) {
-                std::cerr << "Failed creating file: " << std::strerror(errno) << "\n";
+            std::string compressedFilepath = folderdir + "/" + filename + ".gz";
+
+            // int filefd = open(compressedFilepath.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0644);
+            // if (filefd == -1) {
+            //     std::cerr << "Failed creating file: " << std::strerror(errno) << "\n";
+            //     break;
+            // }
+
+            gzFile compressedfile = gzopen(compressedFilepath.c_str(), "wb");
+            if (!compressedfile) {
+                std::cerr << "Failed creating compressed file: " << std::strerror(errno) << "\n";
                 break;
             }
-
             int remaining = filesize;
             while (remaining > 0) {
                 bytesRecv = recv(clientfd, buffer, std::min(remaining, BUFFER_SIZE), 0);
                 if (bytesRecv <= 0) {
                     std::cerr << "Client disconnected while transferring file: " << std::strerror(errno) << "\n";
-                    close(filefd);
+                    gzclose(compressedfile);
                     break;
                 }
-                write(filefd, buffer, bytesRecv);
+                gzwrite(compressedfile, buffer, bytesRecv);
                 remaining -= bytesRecv;
             }
 
-            std::cout << "File received and saved to " << filepath << "\n";
-            close(filefd);
+            std::cout << "File received and saved to " << compressedFilepath << "\n";
+            gzclose(compressedfile);
         } else {
+            std::cerr << "Unknown option selected by client\n";
         }
     }
     close(clientfd);
@@ -189,11 +197,10 @@ int main() {
     struct sockaddr_in clientAddr;
     socklen_t clientAddrSize = sizeof(clientAddr);
 
-    Threadpool pool(8);
+    Threadpool pool(16);
 
     while (1) {
-        int clientfd = accept(sockfd, (struct sockaddr*)&clientAddr,
-                              &clientAddrSize);  // client fd
+        int clientfd = accept(sockfd, (struct sockaddr*)&clientAddr, &clientAddrSize);  // client fd
 
         if (clientfd == -1) {
             std::cerr << "failed accept(): " << std::strerror(errno) << "\n";
@@ -202,8 +209,6 @@ int main() {
 
         std::cout << "client connected: Address=" << inet_ntoa(clientAddr.sin_addr) << " Port=" << ntohs(clientAddr.sin_port) << "\n";
 
-        // std::thread (clientHandler, clientfd).detach ();
-        // pool.enqueueTask([clientfd]() { clientHandler(clientfd); });
         pool.enqueueTask(clientHandler, clientfd);
     }
 
