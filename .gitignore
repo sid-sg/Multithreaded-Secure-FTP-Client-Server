@@ -1,8 +1,6 @@
 store/
 .vscode/
 
-!threadpool/
-
 server
 client
 threadpool
