@@ -1,5 +1,8 @@
-store
+store/
+.vscode/
+
+!threadpool/
+
 server
 client
 threadpool
-.vscode
