@@ -69,7 +69,7 @@ int main() {
     int option = 0;
 
     while (1) {
-        std::cout << "Choose:\n 1. list files \t 2. upload file  \t 3. download file :\n";
+        std::cout << "Choose:\n 1. list files \t 2. upload file \t 3. download file \t 4. rename file \t 5. delete file \t 6. exit :\n";
         std::cin >> option;
         buffer.clear();
 
@@ -86,9 +86,11 @@ int main() {
             buffer.clear();
 
             char recvBuffer[BUFFER_SIZE];
+            memset(recvBuffer, 0, sizeof(recvBuffer));
             int bytesRecv = recv(sockfd, recvBuffer, sizeof(recvBuffer) - 1, 0);
             if (bytesRecv <= 0) {
                 std::cerr << "Failed receiving: " << std::strerror(errno) << "\n";
+                continue;
             }
 
             recvBuffer[bytesRecv] = '\0';
@@ -216,12 +218,17 @@ int main() {
                 continue;
             }
 
-
             char recvBuffer[BUFFER_SIZE];
             int bytesRecv = recv(sockfd, recvBuffer, sizeof(recvBuffer), 0);
 
-            if (bytesRecv == -1) {
+            if (bytesRecv <= 0) {
                 std::cerr << "failed recieving compressed filesize: " << std::strerror(errno) << "\n";
+                continue;
+            }
+
+            std::string serverResponse(recvBuffer);
+            if (serverResponse.find("ERROR:") != std::string::npos) {
+                std::cerr << "Server Error: " << serverResponse << "\n";
                 continue;
             }
 
@@ -289,14 +296,14 @@ int main() {
                     }
 
                     int decompressedBytes = CHUNK_SIZE - zstream.avail_out;
-                    if (write(downloadFd, outBuffer, decompressedBytes) == -1) { // Write decompressed data to file 
+                    if (write(downloadFd, outBuffer, decompressedBytes) == -1) {  // Write decompressed data to file
                         std::cerr << "Failed writing to file: " << std::strerror(errno) << "\n";
                         inflateEnd(&zstream);
                         close(downloadFd);
                         break;
                     }
 
-                } while (zstream.avail_in > 0 ||  zstream.avail_out == 0 );
+                } while (zstream.avail_in > 0 || zstream.avail_out == 0);
 
                 int progress = static_cast<int>((static_cast<float>(totalBytesRecv) / filesize) * totalSteps);
                 progress = std::min(progress, totalSteps);
@@ -304,6 +311,94 @@ int main() {
             }
             std::cout << "\n";
             std::cout << "Recieved file: " << filename << "\n";
+
+        } else if (option == 4) {  // rename
+
+            buffer = "rename";
+            bytesSent = send(sockfd, buffer.c_str(), buffer.length(), 0);
+
+            if (bytesSent == -1) {
+                std::cerr << "failed sending rename request: " << std::strerror(errno) << "\n";
+                // close(sockfd);
+                continue;
+            }
+            buffer.clear();
+
+            std::string filename;
+            std::cout << "Enter file filename to rename: \n";
+            std::cin >> filename;
+
+            std::cout << "NOTE: Mention the file extension while giving new name\n";
+            std::cout << "Enter new filename:\n";
+            std::string newname;
+            std::cin >> newname;
+
+            std::string metadata = filename + ":";
+            metadata += newname;
+
+            std::cout << "metadata: " << metadata << "\n";
+
+            bytesSent = send(sockfd, metadata.c_str(), metadata.length(), 0);  // send metadata( fielname:newfilename)
+            if (bytesSent == -1) {
+                std::cerr << "Failed to send filename: " << std::strerror(errno) << "\n";
+                continue;
+            }
+
+            char recvBuffer[BUFFER_SIZE];
+            int bytesRecv = recv(sockfd, recvBuffer, sizeof(recvBuffer) - 1, 0);
+            recvBuffer[bytesRecv] = '\0';
+
+            if (bytesRecv <= 0) {
+                std::cerr << "failed recieving server response: " << std::strerror(errno) << "\n";
+                continue;
+            }
+
+            std::string serverResponse(recvBuffer);
+            if (serverResponse.find("ERROR:") != std::string::npos) {
+                std::cerr << "Server Error: " << serverResponse << "\n";
+                continue;
+            }
+
+            std::cout << "File: " << filename << ", renamed to :" << newname << "\n";
+
+        } else if (option == 5) {  // delete
+
+            buffer = "delete";
+            bytesSent = send(sockfd, buffer.c_str(), buffer.length(), 0);
+
+            if (bytesSent == -1) {
+                std::cerr << "failed sending delete request: " << std::strerror(errno) << "\n";
+                continue;
+            }
+            buffer.clear();
+
+            std::string filename;
+            std::cout << "Enter file filename to delete: \n";
+            std::cin >> filename;
+
+            bytesSent = send(sockfd, filename.c_str(), filename.length(), 0);  // send filename
+            if (bytesSent == -1) {
+                std::cerr << "Failed to send filename: " << std::strerror(errno) << "\n";
+                continue;
+            }
+
+            char recvBuffer[BUFFER_SIZE];
+            int bytesRecv = recv(sockfd, recvBuffer, sizeof(recvBuffer) - 1, 0);
+            recvBuffer[bytesRecv] = '\0';
+
+            if (bytesRecv <= 0) {
+                std::cerr << "failed recieving server response: " << std::strerror(errno) << "\n";
+                continue;
+            }
+
+            std::string serverResponse(recvBuffer);
+            if (serverResponse.find("ERROR:") != std::string::npos) {
+                std::cerr << "Server Error: " << serverResponse << "\n";
+                continue;
+            }
+
+            std::cout << "File: " << filename << " deleted"
+                      << "\n";
 
         } else {
             std::cerr << "invalid option"

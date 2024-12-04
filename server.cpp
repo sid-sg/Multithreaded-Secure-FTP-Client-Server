@@ -2,9 +2,9 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <netinet/in.h>
+#include <sys/sendfile.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
-#include <sys/sendfile.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <zlib.h>
@@ -18,6 +18,7 @@
 #define PORT 7000
 #define BACKLOG 20
 #define BUFFER_SIZE 4096
+#define CHUNK_SIZE 16384
 
 std::string ls(std::string directory) {
     DIR* d = opendir(directory.c_str());
@@ -57,7 +58,10 @@ void clientHandler(int clientfd) {
     std::cout << "Received from client: \n";
     std::cout << "Name: " << clientname << "\n";
     std::string folderdir = "./store/" + clientname;
-    struct stat st = {0};
+
+    struct stat st;
+    memset(&st, 0, sizeof(st));
+
     if (stat(folderdir.c_str(), &st) == -1) {
         mkdir(folderdir.c_str(), 0700);
     }
@@ -85,6 +89,7 @@ void clientHandler(int clientfd) {
                 files = "Empty directory";
             }
 
+    memset(buffer, 0, sizeof(buffer));
             if (files.size() < BUFFER_SIZE) {
                 strcpy(buffer, files.c_str());
             } else {
@@ -92,6 +97,8 @@ void clientHandler(int clientfd) {
                 close(clientfd);
                 continue;
             }
+
+            std::cout << "ls content: " << buffer;
 
             // Send the directory files to the client
             int bytesSent = send(clientfd, buffer, strlen(buffer), 0);
@@ -101,6 +108,8 @@ void clientHandler(int clientfd) {
             }
             std::cout << "Sent directory files to client\n";
         } else if (option == "upload") {
+
+    memset(buffer, 0, sizeof(buffer));
             bytesRecv = recv(clientfd, buffer, sizeof(buffer), 0);  // recv file metadata (filename:filesize)
             if (bytesRecv <= 0) {
                 std::cerr << "client disconnected: " << std::strerror(errno) << "\n";
@@ -137,6 +146,8 @@ void clientHandler(int clientfd) {
                 std::cerr << "Failed creating compressed file: " << std::strerror(errno) << "\n";
                 break;
             }
+
+    memset(buffer, 0, sizeof(buffer));
             int remaining = filesize;
             while (remaining > 0) {
                 bytesRecv = recv(clientfd, buffer, std::min(remaining, BUFFER_SIZE), 0);
@@ -152,6 +163,8 @@ void clientHandler(int clientfd) {
             std::cout << "File received and saved to " << compressedFilepath << "\n";
             gzclose(compressedfile);
         } else if (option == "download") {
+
+    memset(buffer, 0, sizeof(buffer));
             bytesRecv = recv(clientfd, buffer, sizeof(buffer), 0);  // recv filename to download
             if (bytesRecv <= 0) {
                 std::cerr << "client disconnected: " << std::strerror(errno) << "\n";
@@ -167,12 +180,13 @@ void clientHandler(int clientfd) {
             int filefd = open(filepath.c_str(), O_RDONLY);
             if (filefd == -1) {
                 std::cerr << "File not found: " << filename << "\n";
+                std::string errorMsg = "ERROR: File Not Found";
+                send(clientfd, errorMsg.c_str(), errorMsg.length(), 0);
                 return;
             }
-            
+
             off_t filesize = lseek(filefd, 0, SEEK_END);
             lseek(filefd, 0, SEEK_SET);
-
 
             std::string data = std::to_string(filesize);
             int bytesSent = send(clientfd, data.c_str(), data.length(), 0);
@@ -200,7 +214,6 @@ void clientHandler(int clientfd) {
                 continue;
             }
 
-
             off_t totalBytesSent = 0;
             off_t bytesRemaining = filesize;
             const size_t chunkSize = 65536;
@@ -217,10 +230,84 @@ void clientHandler(int clientfd) {
                 bytesRemaining -= bytesSent;
             }
 
-            std::cout<<"Compressed file sent to client\n";
+            std::cout << "Compressed file sent to client\n";
 
-            
+        } else if (option == "rename") {
+            bytesRecv = recv(clientfd, buffer, sizeof(buffer), 0);  // recv file metadata
+            if (bytesRecv <= 0) {
+                std::cerr << "client disconnected: " << std::strerror(errno) << "\n";
+                break;
+            }
 
+            std::string metadata(buffer, bytesRecv);
+            memset(buffer, 0, sizeof(buffer));
+
+            std::string::size_type partition = metadata.find(":");  // Example usage
+            if (partition == std::string::npos) {
+                std::cerr << "Invalid metadata received: " << metadata << "\n";
+                std::string errorMsg = "ERROR: Invalid metadata format";
+                send(clientfd, errorMsg.c_str(), errorMsg.length(), 0);
+                continue;
+            }
+
+            std::string filename = metadata.substr(0, partition);
+            std::string newname = metadata.substr(partition + 1);
+
+            std::string filepath = folderdir + "/" + filename + ".gz";
+            std::string newpath = folderdir + "/" + newname + ".gz";
+
+            std::cout << "filepath: " << filepath << "\n";
+            std::cout << "newpath: " << newpath << "\n";
+
+            // struct stat st = {0};
+            // int filefd = open(filepath.c_str(), O_RDONLY);
+            // if ( filefd == -1) {
+            //     std::cerr << "File not found: " << filename << "\n";
+            //     std::string errorMsg = "ERROR: File Not Found";
+            //     close(filefd);
+            //     send(clientfd, errorMsg.c_str(), errorMsg.length(), 0);
+            // }
+            // close(filefd);
+
+            if (rename(filepath.c_str(), newpath.c_str()) != 0) {
+                std::cerr << "Failed to rename file: " << std::strerror(errno) << "\n";
+                std::string errorMsg = "ERROR: Failed to rename file";
+                send(clientfd, errorMsg.c_str(), errorMsg.length(), 0);
+                continue;
+            }
+
+            strcpy(buffer, "success");
+            int bytesSent = send(clientfd, "", sizeof(buffer), 0);
+            if (bytesSent == -1) {
+                std::cerr << "failed sending message: " << std::strerror(errno) << "\n";
+                continue;
+            }
+
+        } else if (option == "delete") {
+            bytesRecv = recv(clientfd, buffer, sizeof(buffer), 0);  // recv filename
+            if (bytesRecv <= 0) {
+                std::cerr << "client disconnected: " << std::strerror(errno) << "\n";
+                break;
+            }
+
+            std::string filename(buffer, bytesRecv);
+            std::string filepath = folderdir + "/" + filename + ".gz";
+
+            memset(buffer, 0, sizeof(buffer));
+
+            if (remove(filepath.c_str()) != 0) {
+                std::cerr << "Failed to delete file: " << std::strerror(errno) << "\n";
+                std::string errorMsg = "ERROR: Failed to delete file";
+                send(clientfd, errorMsg.c_str(), errorMsg.length(), 0);
+                continue;
+            }
+
+            strcpy(buffer, "success");
+            int bytesSent = send(clientfd, "", sizeof(buffer), 0);
+            if (bytesSent == -1) {
+                std::cerr << "failed sending message: " << std::strerror(errno) << "\n";
+                continue;
+            }
 
         } else {
             std::cerr << "Unknown option selected by client\n";
@@ -232,7 +319,9 @@ void clientHandler(int clientfd) {
 }
 
 int main() {
-    struct stat st = {0};
+    struct stat st;
+    memset(&st, 0, sizeof(st));
+
     if (stat("./store", &st) == -1) {
         mkdir("./store", 0700);
     }
