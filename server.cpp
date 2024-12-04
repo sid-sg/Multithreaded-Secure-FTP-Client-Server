@@ -4,6 +4,7 @@
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/sendfile.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <zlib.h>
@@ -26,7 +27,11 @@ std::string ls(std::string directory) {
     if (d) {
         while ((dir = readdir(d)) != NULL) {
             if (strcmp(dir->d_name, ".") != 0 && strcmp(dir->d_name, "..") != 0) {
-                files += dir->d_name;
+                std::string filename = dir->d_name;
+                if ((filename.size() > 3) && (filename.substr(filename.size() - 3) == ".gz")) {
+                    filename = filename.substr(0, filename.size() - 3);
+                }
+                files += filename;
                 files += "\n";
             }
         }
@@ -96,7 +101,7 @@ void clientHandler(int clientfd) {
             }
             std::cout << "Sent directory files to client\n";
         } else if (option == "upload") {
-            bytesRecv = recv(clientfd, buffer, sizeof(buffer),0);  // recv file metadata (filename:filesize)
+            bytesRecv = recv(clientfd, buffer, sizeof(buffer), 0);  // recv file metadata (filename:filesize)
             if (bytesRecv <= 0) {
                 std::cerr << "client disconnected: " << std::strerror(errno) << "\n";
                 break;
@@ -146,9 +151,82 @@ void clientHandler(int clientfd) {
 
             std::cout << "File received and saved to " << compressedFilepath << "\n";
             gzclose(compressedfile);
+        } else if (option == "download") {
+            bytesRecv = recv(clientfd, buffer, sizeof(buffer), 0);  // recv filename to download
+            if (bytesRecv <= 0) {
+                std::cerr << "client disconnected: " << std::strerror(errno) << "\n";
+                break;
+            }
+
+            std::string filename(buffer, bytesRecv);
+            filename += ".gz";
+            memset(buffer, 0, sizeof(buffer));
+
+            std::string filepath = folderdir + "/" + filename;
+
+            int filefd = open(filepath.c_str(), O_RDONLY);
+            if (filefd == -1) {
+                std::cerr << "File not found: " << filename << "\n";
+                return;
+            }
+            
+            off_t filesize = lseek(filefd, 0, SEEK_END);
+            lseek(filefd, 0, SEEK_SET);
+
+
+            std::string data = std::to_string(filesize);
+            int bytesSent = send(clientfd, data.c_str(), data.length(), 0);
+            if (bytesSent == -1) {
+                std::cerr << "Failed sending compressed filesize: " << std::strerror(errno) << "\n";
+                continue;
+            }
+
+            char ACK[3];
+
+            int bytesRecv = recv(clientfd, ACK, sizeof(ACK) - 1, 0);
+
+            ACK[bytesRecv] = '\0';
+
+            if (bytesRecv == -1) {
+                std::cerr << "failed recving ACK: " << std::strerror(errno) << "\n";
+                continue;
+            }
+
+            std::cout << "ACK: " << ACK << "\n";
+
+            if (strcmp(ACK, "OK") != 0) {
+                std::cerr << "recieved NACK: "
+                          << "\n";
+                continue;
+            }
+
+
+            off_t totalBytesSent = 0;
+            off_t bytesRemaining = filesize;
+            const size_t chunkSize = 65536;
+
+            while (bytesRemaining > 0) {
+                size_t remaining = std::min(chunkSize, static_cast<size_t>(bytesRemaining));
+                bytesSent = sendfile(clientfd, filefd, &totalBytesSent, remaining);
+                if (bytesSent == -1) {
+                    std::cerr << "failed sending file: " << std::strerror(errno) << "\n";
+                    close(filefd);
+                    break;
+                }
+
+                bytesRemaining -= bytesSent;
+            }
+
+            std::cout<<"Compressed file sent to client\n";
+
+            
+
+
         } else {
             std::cerr << "Unknown option selected by client\n";
         }
+
+        std::cout << "\n";
     }
     close(clientfd);
 }

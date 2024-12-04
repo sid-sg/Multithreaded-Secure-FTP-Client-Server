@@ -28,6 +28,9 @@ class Threadpool {
 };
 
 Threadpool::Threadpool(int numThreads) : numThreads(numThreads), stop(false) {
+    if (numThreads <= 0) {
+        throw std::invalid_argument("No. of threads must be >= 0");
+    }
     for (int i = 0; i < numThreads; i++) {
         threads.emplace_back([this]() {
             std::function<void()> task;
@@ -35,7 +38,7 @@ Threadpool::Threadpool(int numThreads) : numThreads(numThreads), stop(false) {
                 std::unique_lock<std::mutex> lock(mtx);
                 cv.wait(lock, [this]() { return !tasks.empty() || stop; });
 
-                if (stop) {
+                if (stop && tasks.empty()) {
                     return;
                 }
                 task = std::move(tasks.front());
