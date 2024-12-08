@@ -16,6 +16,6 @@ mkdir -p build
 cd build
 cmake ..
 cmake --build .
-sudo ./bin/client <server_ipaddress> <server_portno>
+./bin/client <server_ipaddress> <server_portno>
 ```
-example: ``sudo ./bin/server 127.0.0.1 8000``
+example: ``./bin/server 127.0.0.1 8000``
