@@ -1,6 +1,7 @@
 store/
 .vscode/
+build/
 
-server
 client
-threadpool
+
+!client/

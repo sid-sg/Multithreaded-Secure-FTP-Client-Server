@@ -14,12 +14,24 @@
 
 #include "./include/progressbar.hpp"
 
-#define PORT 7000
-#define SERVER_IP "127.0.0.1"
+// #define PORT 7000
+// #define SERVER_IP "127.0.0.1"
 #define BUFFER_SIZE 4096
 #define CHUNK_SIZE 16384
 
-int main() {
+int PORT;
+char *SERVER_IP;
+
+int main(int argc, char *argv[]) {
+    if (argc != 3) {
+        std::cerr << "Usage: " << argv[0] << " <server_ip_address> <server_portnum>"
+                  << "\n";
+        return 1;
+    }
+
+    SERVER_IP = argv[1];
+    PORT = atoi(argv[2]);
+
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);  // server fd
     if (sockfd == -1) {
         std::cerr << "socket creation failed: " << std::strerror(errno) << "\n";
@@ -98,7 +110,20 @@ int main() {
 
         } else if (option == 2) {  // upload
 
-            // send upload
+            std::string pathname;
+            std::cout << "Enter file pathname: \n";
+            std::cin >> pathname;
+
+            int filefd = open(pathname.c_str(), O_RDONLY);
+            if (filefd == -1) {
+                std::cerr << "failed opening file: " << std::strerror(errno) << "\n";
+                buffer = "error";
+                bytesSent = send(sockfd, buffer.c_str(), buffer.length(), 0);
+                buffer.clear();
+                continue;
+            }
+
+            // send upload request
             buffer = "upload";
             bytesSent = send(sockfd, buffer.c_str(), buffer.length(), 0);
 
@@ -108,17 +133,6 @@ int main() {
                 continue;
             }
             buffer.clear();
-
-            std::string pathname;
-            std::cout << "Enter file pathname: \n";
-            std::cin >> pathname;
-
-            int filefd = open(pathname.c_str(), O_RDONLY);
-            if (filefd == -1) {
-                std::cerr << "failed opening file: " << std::strerror(errno) << "\n";
-                close(filefd);
-                continue;
-            }
 
             std::string filename = pathname.substr(pathname.find_last_of("/") + 1);
 
@@ -135,6 +149,8 @@ int main() {
             }
 
             char ACK[3];
+
+            memset(ACK, 0, sizeof(ACK));
 
             int bytesRecv = recv(sockfd, ACK, sizeof(ACK) - 1, 0);
 
