@@ -1,5 +1,6 @@
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <signal.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -7,9 +8,9 @@
 #include <cerrno>
 #include <cstring>
 
-#include "threadpool.hpp"
-#include "utils.hpp"
-#include "handlers.hpp"
+#include "../include/handlers.hpp"
+#include "../include/threadpool.hpp"
+#include "../include/utils.hpp"
 
 #define BACKLOG 20
 #define BUFFER_SIZE 4096
@@ -18,6 +19,7 @@
 int PORT;
 
 int main(int argc, char* argv[]) {
+    signal(SIGPIPE, SIG_IGN);
     // if (!utils::isRoot()) {
     //     std::cerr << "This program must be run as root/sudo user\n";
     //     return 1;
@@ -31,7 +33,7 @@ int main(int argc, char* argv[]) {
 
     PORT = atoi(argv[1]);
 
-    if (!utils::ensureDirectory("./store")) {
+    if (!utils::ensureDirectory("../../store")) {
         std::cerr << "Failed to create store directory\n";
         return 1;
     }

@@ -11,6 +11,7 @@
 
 #include <cstring>
 #include <iostream>
+#include <vector>
 
 namespace handlers {
 void serverHandler(int clientfd);
