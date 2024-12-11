@@ -1,3 +1,6 @@
+# Preview
+https://github.com/user-attachments/assets/e8572f6c-48f4-42b0-9bf0-2ab010d9eace
+
 # Build
 ## Build server
 ```
@@ -19,7 +22,6 @@ cmake --build .
 ./bin/client <server_ipaddress> <server_portno>
 ```
 example: ``./bin/server 127.0.0.1 8000``
-
 
 # Debug using valgrind
 ## server
