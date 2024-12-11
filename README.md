@@ -19,3 +19,10 @@ cmake --build .
 ./bin/client <server_ipaddress> <server_portno>
 ```
 example: ``./bin/server 127.0.0.1 8000``
+
+
+# Debug using valgrind
+## server
+``valgrind --leak-check=full --track-origins=yes ./bin/server <server_portno>``
+## client
+``valgrind --leak-check=full --track-origins=yes ./bin/client <server_ipaddress> <server_portno>``
