@@ -169,6 +169,9 @@ void uploadFile(int sockfd) {
     off_t totalBytesSent = 0;
     off_t bytesRemaining = filesize;
     const size_t chunkSize = 65536;
+
+    // start timer
+    auto startTime = std::chrono::high_resolution_clock::now();
     while (bytesRemaining > 0) {
         size_t toSend = std::min(static_cast<size_t>(bytesRemaining), chunkSize);
         ssize_t bytesSent = sendfile(sockfd, filefd, &totalBytesSent, toSend);
@@ -184,7 +187,10 @@ void uploadFile(int sockfd) {
         progressBar.update(std::min(progress, totalSteps));
     }
 
-    std::cout << "\nFile sent successfully\n";
+    auto endTime = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> duration = endTime - startTime;
+
+    std::cout << "\nFile sent successfully in " << duration.count() << " seconds\n";
     close(filefd);
 }
 
@@ -267,6 +273,8 @@ void downloadFile(int sockfd) {
         return;
     }
 
+    // start timer
+    auto startTime = std::chrono::high_resolution_clock::now();
     try {
         std::vector<unsigned char> decompressionBuffer(CHUNK_SIZE);
         while (bytesRemaining > 0) {
@@ -311,6 +319,11 @@ void downloadFile(int sockfd) {
     }
 
     inflateEnd(&zstream);
+
+    auto endTime = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> duration = endTime - startTime;
+
+    std::cout << "Time taken: " << duration.count() << " seconds\n";
     close(downloadFd);
 }
 
