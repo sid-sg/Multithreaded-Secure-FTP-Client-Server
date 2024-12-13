@@ -14,10 +14,19 @@ set(SOURCES
     src/handlers.cpp
     src/utils.cpp
     src/threadpool.cpp
+    src/ssl_ctx.cpp
 )
 
 add_executable(server ${SOURCES})
 
 # Link libraries
 find_package(ZLIB REQUIRED) 
-target_link_libraries(server PRIVATE ZLIB::ZLIB pthread)
+find_package(OpenSSL REQUIRED)
+
+target_link_libraries(server
+    PRIVATE
+    ZLIB::ZLIB
+    OpenSSL::SSL
+    OpenSSL::Crypto
+    pthread
+)

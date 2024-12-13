@@ -1,3 +1,7 @@
 store/
 .vscode/
 build/
+
+server.key
+server.csr
+server.crt

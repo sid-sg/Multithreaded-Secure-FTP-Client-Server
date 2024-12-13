@@ -9,6 +9,7 @@
 #include <cstring>
 
 #include "../include/handlers.hpp"
+#include "../include/ssl_ctx.hpp"
 #include "../include/threadpool.hpp"
 #include "../include/utils.hpp"
 
@@ -24,6 +25,8 @@ int main(int argc, char* argv[]) {
     //     std::cerr << "This program must be run as root/sudo user\n";
     //     return 1;
     // }
+
+    SSL_CTX* ctx = ssl::create_SSLctx("../security/server.crt","../security/server.key");
 
     if (argc != 2) {
         std::cerr << "Usage: " << argv[0] << " <portnum>"
