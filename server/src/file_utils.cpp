@@ -1,4 +1,4 @@
-#include "../include/utils.hpp"
+#include "../include/file_utils.hpp"
 
 namespace utils {
 
@@ -51,6 +51,5 @@ off_t getFilesize(int filefd) {
     return filesize;
 }
 
-void sendError(int clientfd, const std::string& errorMsg) { send(clientfd, errorMsg.c_str(), errorMsg.length(), 0); }
 
 }  // namespace utils
