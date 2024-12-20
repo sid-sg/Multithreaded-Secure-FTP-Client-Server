@@ -9,24 +9,33 @@ SSL_CTX *create_SSLctx(const char *cert_file, const char *key_file) {
     ctx = SSL_CTX_new(TLS_server_method());
     if (!ctx) {
         std::cerr << "Unable to create SSL_CTX\n";
+        ERR_print_errors_fp(stderr);
         SSL_CTX_free(ctx);
         exit(EXIT_FAILURE);
     }
 
     if (!SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION)) {
         std::cerr << "Failed to set the minimum TLS protocol version\n";
+        ERR_print_errors_fp(stderr);
         SSL_CTX_free(ctx);
         exit(EXIT_FAILURE);
     }
 
-    if (SSL_CTX_use_certificate_chain_file(ctx, cert_file) <= 0) {
-        std::cerr << "Failed to load the server certificate chain file\n";
+    // if (SSL_CTX_use_certificate_chain_file(ctx, cert_file) <= 0) {
+    //     std::cerr << "Failed to load the server certificate chain file\n";
+    //     SSL_CTX_free(ctx);
+    //     exit(EXIT_FAILURE);
+    // }
+    if (SSL_CTX_use_certificate_file(ctx, cert_file, SSL_FILETYPE_PEM) <= 0) {
+        std::cerr << "Failed to load certificate file\n";
+        ERR_print_errors_fp(stderr);
         SSL_CTX_free(ctx);
         exit(EXIT_FAILURE);
     }
 
     if (SSL_CTX_use_PrivateKey_file(ctx, key_file, SSL_FILETYPE_PEM) <= 0) {
         std::cerr << "Error loading server private key file\n";
+        ERR_print_errors_fp(stderr);
         SSL_CTX_free(ctx);
         exit(EXIT_FAILURE);
     }

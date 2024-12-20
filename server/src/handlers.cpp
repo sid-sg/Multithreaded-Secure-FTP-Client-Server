@@ -1,6 +1,9 @@
 #include "../include/handlers.hpp"
 
-#include "../include/utils.hpp"
+#include <sys/socket.h>
+#include <sys/types.h>
+
+#include "../include/file_utils.hpp"
 
 #define BUFFER_SIZE 4096
 #define CHUNK_SIZE 16384
@@ -9,8 +12,8 @@ namespace handlers {
 
 void clientHandler(int clientfd) {
     std::vector<char> buffer(BUFFER_SIZE, 0);
- 
-    int bytesRecv = recv(clientfd, buffer.data(), buffer.size() - 1, 0); // recv clientname
+
+    int bytesRecv = recv(clientfd, buffer.data(), buffer.size() - 1, 0);  // recv clientname
     if (bytesRecv <= 0) {
         std::cerr << "Client disconnected or error occurred: " << std::strerror(errno) << "\n";
         return;
@@ -94,7 +97,7 @@ void listFiles(int clientfd, const std::string& folderdir) {
     size_t bytesSent = 0;
     std::cout << "Sending directory files to client...\n";
 
-    //send files list in chunk
+    // send files list in chunk
     while (bytesSent < totalSize) {
         size_t chunkSize = std::min(BUFFER_SIZE, static_cast<int>(totalSize - bytesSent));
         ssize_t result = send(clientfd, buffer.data() + bytesSent, chunkSize, 0);
@@ -114,7 +117,7 @@ void listFiles(int clientfd, const std::string& folderdir) {
 void uploadFile(int clientfd, const std::string& folderdir) {
     std::vector<char> buffer(BUFFER_SIZE, 0);
 
-    //recv file metadata (filename:filesize)
+    // recv file metadata (filename:filesize)
     int bytesRecv = recv(clientfd, buffer.data(), buffer.size(), 0);
     if (bytesRecv <= 0) {
         std::cerr << "Client disconnected or error receiving metadata: " << std::strerror(errno) << "\n";
@@ -133,7 +136,7 @@ void uploadFile(int clientfd, const std::string& folderdir) {
     std::string filename = metadata.substr(0, partition);
     std::string filesizeStr = metadata.substr(partition + 1);
 
-    // validate filename 
+    // validate filename
     std::regex validFilenameRegex("^[a-zA-Z0-9._-]+$");
     if (!std::regex_match(filename, validFilenameRegex)) {
         std::cerr << "Invalid filename received: " << filename << "\n";
@@ -155,7 +158,7 @@ void uploadFile(int clientfd, const std::string& folderdir) {
     std::cout << "Filename: " << filename << "\n";
     std::cout << "Filesize: " << filesize << " bytes\n";
 
-    //send ACKt
+    // send ACKt
     if (send(clientfd, "OK", 2, 0) == -1) {
         std::cerr << "Failed sending ACK: " << std::strerror(errno) << "\n";
         return;

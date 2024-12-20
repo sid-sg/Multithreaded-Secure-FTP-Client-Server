@@ -190,7 +190,7 @@ void uploadFile(int sockfd) {
     auto endTime = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = endTime - startTime;
 
-    std::cout << "\nFile sent successfully in " << duration.count() << " seconds\n";
+    std::cout << "\nFile sent and compressed successfully in " << duration.count() << " seconds\n";
     close(filefd);
 }
 
@@ -323,7 +323,7 @@ void downloadFile(int sockfd) {
     auto endTime = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = endTime - startTime;
 
-    std::cout << "Time taken: " << duration.count() << " seconds\n";
+    std::cout << "File successfully recieved and uncompressed in: " << duration.count() << " seconds\n";
     close(downloadFd);
 }
 

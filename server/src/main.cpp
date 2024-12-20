@@ -1,18 +1,18 @@
-// #include <arpa/inet.h>
-// #include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
 #include <openssl/bio.h>
 #include <signal.h>
-// #include <sys/socket.h>
-// #include <sys/stat.h>
-// #include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include <cerrno>
 #include <cstring>
 
+#include "../include/file_utils.hpp"
 #include "../include/handlers.hpp"
 #include "../include/ssl_utils.hpp"
 #include "../include/threadpool.hpp"
-#include "../include/file_utils.hpp"
 
 #define BACKLOG 20
 #define BUFFER_SIZE 4096
@@ -62,6 +62,7 @@ int main(int argc, char* argv[]) {
     BIO* acceptor_bio = BIO_new_accept(PORT);  // BIO_new() + BIO_set_accept_name() / socket()
     if (!acceptor_bio) {
         std::cerr << "Error creating acceptor BIO\n";
+        ERR_print_errors_fp(stderr);
         SSL_CTX_free(ctx);
         exit(EXIT_FAILURE);
     }
@@ -89,6 +90,7 @@ int main(int argc, char* argv[]) {
     BIO_set_bind_mode(acceptor_bio, BIO_BIND_REUSEADDR);  // setsockopt() + bind() + listen()
     if (BIO_do_accept(acceptor_bio) <= 0) {
         std::cerr << "Error setting up acceptor socket";
+        ERR_print_errors_fp(stderr);
         SSL_CTX_free(ctx);
         exit(EXIT_FAILURE);
     }
@@ -114,12 +116,14 @@ int main(int argc, char* argv[]) {
 
         if (BIO_do_accept(acceptor_bio) <= 0) {  // Wait for the next client to connect
             std::cerr << "Error accepting client connection\n";
+            ERR_print_errors_fp(stderr);
             continue;
         }
 
         client_bio = BIO_pop(acceptor_bio);  // Pop the client connection from the BIO chain
         if (!client_bio) {
             std::cerr << "Error popping client BIO\n";
+            ERR_print_errors_fp(stderr);
             continue;
         }
         const char* client_hostname = BIO_get_conn_hostname(client_bio);
@@ -129,6 +133,7 @@ int main(int argc, char* argv[]) {
 
         if ((ssl = SSL_new(ctx)) == NULL) {  // Associate a new SSL handle with the new connection
             std::cerr << "Error creating SSL handle for new connection\n";
+            ERR_print_errors_fp(stderr);
             BIO_free(client_bio);
             continue;
         }
@@ -137,24 +142,26 @@ int main(int argc, char* argv[]) {
         /* Attempt an SSL handshake with the client */
         if (SSL_accept(ssl) <= 0) {
             std::cerr << "Error performing SSL handshake with client\n";
+            ERR_print_errors_fp(stderr);
             SSL_free(ssl);
             continue;
         }
 
-        // unsigned char buf[8192];
-        // size_t nread;
-        // size_t nwritten;
-        // size_t total = 0;
+        unsigned char buf[8192];
+        size_t nread;
+        size_t nwritten;
+        size_t total = 0;
 
-        // while (SSL_read_ex(ssl, buf, sizeof(buf), &nread) > 0) {
-        //     if (SSL_write_ex(ssl, buf, nread, &nwritten) > 0 && nwritten == nread) {
-        //         total += nwritten;
-        //         continue;
-        //     }
-        //     std::cerr << ("Error echoing client input\n");
-        //     break;
-        // }
-        // fprintf(stderr, "Client connection closed, %zu bytes sent\n", total);
+        while (SSL_read_ex(ssl, buf, sizeof(buf), &nread) > 0) {
+            if (SSL_write_ex(ssl, buf, nread, &nwritten) > 0 && nwritten == nread) {
+                total += nwritten;
+                continue;
+            }
+            std::cerr << ("Error echoing client input\n");
+            break;
+        }
+        fprintf(stderr, "Client connection closed, %zu bytes sent\n", total);
+
         SSL_free(ssl);
     }
 

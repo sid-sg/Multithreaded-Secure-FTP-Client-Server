@@ -12,9 +12,9 @@ include_directories(include)
 set(SOURCES
     src/main.cpp
     src/handlers.cpp
-    src/utils.cpp
+    src/file_utils.cpp
     src/threadpool.cpp
-    src/ssl_ctx.cpp
+    src/ssl_utils.cpp
 )
 
 add_executable(server ${SOURCES})
@@ -28,5 +28,4 @@ target_link_libraries(server
     ZLIB::ZLIB
     OpenSSL::SSL
     OpenSSL::Crypto
-    pthread
 )
