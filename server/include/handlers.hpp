@@ -6,6 +6,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <zlib.h>
+#include <openssl/ssl.h>
+#include <openssl/err.h>
 
 #include <cstring>
 #include <iostream>
@@ -13,12 +15,19 @@
 #include <stdexcept>
 
 namespace handlers {
-void clientHandler(int clientfd);
-void listFiles(int clientfd, const std::string& clientname);
-void uploadFile(int clientfd, const std::string& folderdir);
-void downloadFile(int clientfd, const std::string& folderdir);
-void renameFile(int clientfd, const std::string& folderdir);
-void deleteFile(int clientfd, const std::string& folderdir);
+void clientHandler(SSL *ssl);
+void listFiles(SSL *ssl, const std::string& clientname);
+void uploadFile(SSL *ssl, const std::string& folderdir);
+void downloadFile(SSL *ssl, const std::string& folderdir);
+void renameFile(SSL *ssl, const std::string& folderdir);
+void deleteFile(SSL *ssl, const std::string& folderdir);
+
+// void clientHandler(SSL *ssl);
+// void listFiles(SSL *ssl, const std::string& clientname);
+// void uploadFile(SSL *ssl, const std::string& folderdir);
+// void downloadFile(SSL *ssl, const std::string& folderdir);
+// void renameFile(SSL *ssl, const std::string& folderdir);
+// void deleteFile(SSL *ssl, const std::string& folderdir);
 }  // namespace handlers
 
 #endif

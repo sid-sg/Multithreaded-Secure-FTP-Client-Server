@@ -8,6 +8,7 @@
 
 #include <cerrno>
 #include <cstring>
+#include <thread>
 
 #include "../include/file_utils.hpp"
 #include "../include/handlers.hpp"
@@ -126,10 +127,29 @@ int main(int argc, char* argv[]) {
             ERR_print_errors_fp(stderr);
             continue;
         }
-        const char* client_hostname = BIO_get_conn_hostname(client_bio);
-        const char* client_port = BIO_get_conn_port(client_bio);
+        // get client address
+        struct sockaddr_storage addr;
+        socklen_t addr_len = sizeof(addr);
+        int client_fd;
 
-        printf("New Client connected from hostname: %s, port: %s\n", client_hostname ? client_hostname : "unknown", client_port ? client_port : "unknown");
+        BIO_get_fd(client_bio, &client_fd);
+        getpeername(client_fd, (struct sockaddr*)&addr, &addr_len);
+
+        char client_ip[INET6_ADDRSTRLEN];
+        int client_port;
+
+        if (addr.ss_family == AF_INET) {
+            struct sockaddr_in* s = (struct sockaddr_in*)&addr;
+            inet_ntop(AF_INET, &s->sin_addr, client_ip, sizeof(client_ip));
+            client_port = ntohs(s->sin_port);
+        } else {
+            struct sockaddr_in6* s = (struct sockaddr_in6*)&addr;
+            inet_ntop(AF_INET6, &s->sin6_addr, client_ip, sizeof(client_ip));
+            client_port = ntohs(s->sin6_port);
+        }
+
+        printf("New Client connected from IP: %s, Port: %d\n", client_ip, client_port);
+
 
         if ((ssl = SSL_new(ctx)) == NULL) {  // Associate a new SSL handle with the new connection
             std::cerr << "Error creating SSL handle for new connection\n";
@@ -147,26 +167,15 @@ int main(int argc, char* argv[]) {
             continue;
         }
 
-        unsigned char buf[8192];
-        size_t nread;
-        size_t nwritten;
-        size_t total = 0;
-
-        while (SSL_read_ex(ssl, buf, sizeof(buf), &nread) > 0) {
-            if (SSL_write_ex(ssl, buf, nread, &nwritten) > 0 && nwritten == nread) {
-                total += nwritten;
-                continue;
-            }
-            std::cerr << ("Error echoing client input\n");
-            break;
-        }
-        fprintf(stderr, "Client connection closed, %zu bytes sent\n", total);
-
-        SSL_free(ssl);
+        printf("SSL handshake success with client from IP: %s, Port: %d\n", client_ip, client_port);
+        
+        pool.enqueueTask(handlers::clientHandler, ssl);
+        // Handle client in new thread
+        // std::thread(handle_client, ssl).detach();
     }
 
+    BIO_free_all(acceptor_bio);
     SSL_CTX_free(ctx);
-    return EXIT_SUCCESS;
 
     return 0;
 }

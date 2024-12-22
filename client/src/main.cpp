@@ -6,6 +6,7 @@
 #include <cerrno>
 #include <cstring>
 #include <iostream>
+#include <thread>
 
 #include "../include/bio_utils.hpp"
 #include "../include/handlers.hpp"
@@ -17,6 +18,26 @@
 // int PORT;
 char *PORT;
 char *hostname;
+
+void receive_messages(SSL* ssl) {
+    char buffer[BUFFER_SIZE];
+    size_t bytes_read;
+    
+    while (1) {
+        if (SSL_read_ex(ssl, buffer, BUFFER_SIZE - 1, &bytes_read)) {
+            buffer[bytes_read] = '\0';
+            std::cout << "Server: " << buffer << std::endl;
+        } else {
+            int err = SSL_get_error(ssl, bytes_read);
+            if (err == SSL_ERROR_ZERO_RETURN) {
+                std::cout << "Server closed connection." << std::endl;
+                break;
+            }
+            ERR_print_errors_fp(stderr);
+            break;
+        }
+    }
+}
 
 int main(int argc, char *argv[]) {
     if (argc != 3) {
@@ -99,39 +120,15 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    const char *request_start = "GET / HTTP/1.0\r\nConnection: close\r\nHost: ";
-    const char *request_end = "\r\n\r\n";
-    size_t written, readbytes;
-    char buf[160];
-    /* Write an HTTP GET request to the peer */
-    if (!SSL_write_ex(ssl, request_start, strlen(request_start), &written)) {
-        printf("Failed to write start of HTTP request\n");
-        ERR_print_errors_fp(stderr);
-    }
-    if (!SSL_write_ex(ssl, hostname, strlen(hostname), &written)) {
-        printf("Failed to write hostname in HTTP request\n");
-        ERR_print_errors_fp(stderr);
-    }
-    if (!SSL_write_ex(ssl, request_end, strlen(request_end), &written)) {
-        printf("Failed to write end of HTTP request\n");
-        ERR_print_errors_fp(stderr);
-    }
+    std::cout << "Connected to server. Type your messages (type 'quit' to exit):\n";
 
-    while (SSL_read_ex(ssl, buf, sizeof(buf), &readbytes)) {
-        fwrite(buf, 1, readbytes, stdout);
-    }
-    printf("\n");
+    // handlers::serverHandler(sockfd);
+    
+    handlers::serverHandler(ssl);
 
-    if (SSL_get_error(ssl, 0) != SSL_ERROR_ZERO_RETURN) {
-        printf("Failed reading remaining data\n");
-        ERR_print_errors_fp(stderr);
-    }
-
-    int ret = SSL_shutdown(ssl);
-    if (ret < 1) {
-        printf("Error shutting down\n");
-        ERR_print_errors_fp(stderr);
-    }
+    SSL_shutdown(ssl);
+    SSL_free(ssl);
+    SSL_CTX_free(ctx);
 
     return 0;
 }
