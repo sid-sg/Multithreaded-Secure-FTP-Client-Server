@@ -107,7 +107,13 @@ void serverHandler(SSL *ssl) {
                   << " 6. Exit\n"
                   << "Enter your choice: ";
 
-        std::cin >> option;
+        if (!(std::cin >> option)) {
+            // Invalid input: clear the fail state and ignore the rest of the line
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            std::cerr << "Invalid option. Please enter a number between 1 and 6.\n";
+            continue;
+        }
 
         switch (option) {
             case 1:  // list files
