@@ -40,7 +40,7 @@ BIO *create_socket_bio(const char *hostname, const char *port, int family) {
 
     // BIO_CLOSE ensures the socket will be automatically closed when the BIO is freed
     BIO_set_fd(bio, sock, BIO_CLOSE);
-
+    
     return bio;
 }
 

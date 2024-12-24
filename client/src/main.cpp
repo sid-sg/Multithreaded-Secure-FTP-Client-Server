@@ -19,26 +19,6 @@
 char *PORT;
 char *hostname;
 
-void receive_messages(SSL* ssl) {
-    char buffer[BUFFER_SIZE];
-    size_t bytes_read;
-    
-    while (1) {
-        if (SSL_read_ex(ssl, buffer, BUFFER_SIZE - 1, &bytes_read)) {
-            buffer[bytes_read] = '\0';
-            std::cout << "Server: " << buffer << std::endl;
-        } else {
-            int err = SSL_get_error(ssl, bytes_read);
-            if (err == SSL_ERROR_ZERO_RETURN) {
-                std::cout << "Server closed connection." << std::endl;
-                break;
-            }
-            ERR_print_errors_fp(stderr);
-            break;
-        }
-    }
-}
-
 int main(int argc, char *argv[]) {
     if (argc != 3) {
         std::cerr << "Usage: " << argv[0] << " <server_hostname> <server_portnum>"
@@ -120,7 +100,7 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    std::cout << "Connected to server. Type your messages (type 'quit' to exit):\n";
+    std::cout << "Connected to server:\n";
 
     // handlers::serverHandler(sockfd);
     
