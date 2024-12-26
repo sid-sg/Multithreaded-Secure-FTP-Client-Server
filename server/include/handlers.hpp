@@ -1,5 +1,5 @@
-#ifndef HANDLERS_H
-#define HANDLERS_H
+#ifndef HANDLERS_HPP
+#define HANDLERS_HPP
 
 #include <fcntl.h>
 #include <openssl/err.h>

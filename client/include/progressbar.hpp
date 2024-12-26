@@ -1,5 +1,5 @@
-#ifndef PROGRESS_BAR
-#define PROGRESS_BAR
+#ifndef PROGRESSBAR_HPP
+#define PROGRESSBAR_HPP
 
 #include <stdexcept>
 

@@ -1,5 +1,5 @@
-#ifndef UTILS
-#define UTILS
+#ifndef UTILS_HPP
+#define UTILS_HPP
 
 #include <dirent.h>
 #include <sys/stat.h>

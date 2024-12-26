@@ -1,5 +1,5 @@
-#ifndef DB
-#define DB
+#ifndef DB_HPP
+#define DB_HPP
 
 #include <sqlite3.h>
 
