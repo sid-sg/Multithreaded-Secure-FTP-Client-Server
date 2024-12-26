@@ -16,6 +16,7 @@ set(SOURCES
     src/threadpool.cpp
     src/ssl_utils.cpp
     src/db.cpp
+    src/crypto.cpp
 )
 
 add_executable(server ${SOURCES})

@@ -5,6 +5,7 @@
 
 #include "../include/db.hpp"
 #include "../include/file_utils.hpp"
+#include "../include/crypto.hpp"
 
 #define BUFFER_SIZE 4096
 #define CHUNK_SIZE 16384
@@ -106,7 +107,10 @@ void clientHandler::registerUser() {
         return;
     }
 
-    std::string hashedPassword = password;
+    Crypto crypto;
+
+    std::string hashedPassword = crypto.hashPassword(password);
+    std::cout << "Hashed password: " << hashedPassword << "\n";
 
     Database db("../data/user.db");
 
@@ -170,17 +174,20 @@ void clientHandler::loginUser() {
         SSL_write(ssl, errorMsg.c_str(), errorMsg.size());
         return;
     }
-    std::string hashedPassword = password;
-    std::string storedPassword = db.getHashedPassword(username);
+    std::string storedHash = db.getHashedPassword(username);
+    std::cout<<"storegHash: "<<storedHash<<"\n";
 
-    if (storedPassword.empty()) {
+    if (storedHash.empty()) {
         const std::string errorMsg = "USER_NOT_FOUND";
         SSL_write(ssl, errorMsg.c_str(), errorMsg.size());
         return;
     }
 
-    if (hashedPassword != storedPassword) {
+    Crypto crypto;
+
+    if ( !crypto.verifyPasswords(storedHash, password) ) {
         const std::string errorMsg = "WRONG_PASSWORD";
+        std::cout<<errorMsg<<"\n";
         SSL_write(ssl, errorMsg.c_str(), errorMsg.size());
         return;
     }
