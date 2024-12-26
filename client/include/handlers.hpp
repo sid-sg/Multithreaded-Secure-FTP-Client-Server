@@ -14,22 +14,23 @@
 #include <chrono>
 #include <cstring>
 #include <iostream>
+#include <regex>
 #include <vector>
+
+const std::regex passwordRegex("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[a-zA-Z\\d]{8,}$"); //Contains at least one lowercase letter, one uppercase letter, one digit, and is at least 8 characters long
+const std::regex usernameRegex("^[a-zA-Z0-9._-]+$"); //Contains only alphanumeric characters, underscores, and hyphens
 
 namespace handlers {
 void serverHandler(SSL *ssl);
+void registerUser(SSL *ssl);
+bool checkLoggedIn(SSL *ssl);
+void loginUser(SSL *ssl);
 void listFiles(SSL *ssl);
 void uploadFile(SSL *ssl);
 void downloadFile(SSL *ssl);
 void renameFile(SSL *ssl);
 void deleteFile(SSL *ssl);
 
-// void serverHandler(int clientfd);
-// void listFiles(int clientfd);
-// void uploadFile(int clientfd);
-// void downloadFile(int clientfd);
-// void renameFile(int clientfd);
-// void deleteFile(int clientfd);
 
 }  // namespace handlers
 

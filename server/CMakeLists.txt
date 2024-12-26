@@ -15,6 +15,7 @@ set(SOURCES
     src/file_utils.cpp
     src/threadpool.cpp
     src/ssl_utils.cpp
+    src/db.cpp
 )
 
 add_executable(server ${SOURCES})
@@ -22,10 +23,12 @@ add_executable(server ${SOURCES})
 # Link libraries
 find_package(ZLIB REQUIRED) 
 find_package(OpenSSL REQUIRED)
+find_package(SQLite3 REQUIRED)
 
 target_link_libraries(server
     PRIVATE
     ZLIB::ZLIB
     OpenSSL::SSL
     OpenSSL::Crypto
+    SQLite::SQLite3
 )

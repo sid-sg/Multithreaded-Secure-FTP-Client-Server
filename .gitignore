@@ -5,3 +5,5 @@ build/
 server.key
 server.csr
 server.crt
+
+*.db

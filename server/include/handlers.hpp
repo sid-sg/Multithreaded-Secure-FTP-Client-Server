@@ -1,33 +1,40 @@
-#ifndef HANDLERS
-#define HANDLERS
+#ifndef HANDLERS_H
+#define HANDLERS_H
 
 #include <fcntl.h>
+#include <openssl/err.h>
+#include <openssl/ssl.h>
 #include <sys/sendfile.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <zlib.h>
-#include <openssl/ssl.h>
-#include <openssl/err.h>
 
 #include <cstring>
 #include <iostream>
 #include <regex>
 #include <stdexcept>
 
-namespace handlers {
-void clientHandler(SSL *ssl);
-void listFiles(SSL *ssl, const std::string& clientname);
-void uploadFile(SSL *ssl, const std::string& folderdir);
-void downloadFile(SSL *ssl, const std::string& folderdir);
-void renameFile(SSL *ssl, const std::string& folderdir);
-void deleteFile(SSL *ssl, const std::string& folderdir);
+const std::regex passwordRegex("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[a-zA-Z\\d]{8,}$");
+const std::regex usernameRegex("^[a-zA-Z0-9._-]+$");
 
-// void clientHandler(SSL *ssl);
-// void listFiles(SSL *ssl, const std::string& clientname);
-// void uploadFile(SSL *ssl, const std::string& folderdir);
-// void downloadFile(SSL *ssl, const std::string& folderdir);
-// void renameFile(SSL *ssl, const std::string& folderdir);
-// void deleteFile(SSL *ssl, const std::string& folderdir);
-}  // namespace handlers
+class clientHandler {
+    private:
+        SSL* ssl;
+        bool isLoggedin;
+        std::string username;
+        std::string folderdir;
+    public:
+        clientHandler(SSL* ssl) : ssl(ssl), isLoggedin(false) {};
+        void handler();
+        void registerUser();
+        void sendLoggedInStatus();
+        void loginUser();
+        void listFiles();
+        void uploadFile();
+        void downloadFile();
+        void renameFile();
+        void deleteFile();
+        
+};
 
 #endif

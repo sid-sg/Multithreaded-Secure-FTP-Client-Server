@@ -10,6 +10,7 @@
 #include <cstring>
 #include <thread>
 
+#include "../include/db.hpp"
 #include "../include/file_utils.hpp"
 #include "../include/handlers.hpp"
 #include "../include/ssl_utils.hpp"
@@ -44,6 +45,14 @@ int main(int argc, char* argv[]) {
         std::cerr << "Failed to create store directory\n";
         return 1;
     }
+
+    Database db("../data/user.db");
+    if (!db.initTable()) {
+        std::cerr << "Failed to initialize database table\n";
+        return 1;
+    }
+
+    std::cout << "User table initialized\n";
 
     /*
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);  // server fd
@@ -150,7 +159,6 @@ int main(int argc, char* argv[]) {
 
         printf("New Client connected from IP: %s, Port: %d\n", client_ip, client_port);
 
-
         if ((ssl = SSL_new(ctx)) == NULL) {  // Associate a new SSL handle with the new connection
             std::cerr << "Error creating SSL handle for new connection\n";
             ERR_print_errors_fp(stderr);
@@ -168,8 +176,21 @@ int main(int argc, char* argv[]) {
         }
 
         printf("SSL handshake success with client from IP: %s, Port: %d\n", client_ip, client_port);
-        
-        pool.enqueueTask(handlers::clientHandler, ssl);
+
+        pool.enqueueTask([ssl]() {
+            try {
+                clientHandler handler(ssl);
+                handler.handler();
+            } catch (const std::exception& e) {
+                std::cerr << "Exception in client handler: " << e.what() << "\n";
+                SSL_shutdown(ssl);
+                SSL_free(ssl);
+            } catch (...) {
+                std::cerr << "Unknown error occurred in client handler.\n";
+                SSL_shutdown(ssl);
+                SSL_free(ssl);
+            }
+        });
         // Handle client in new thread
         // std::thread(handle_client, ssl).detach();
     }
