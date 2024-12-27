@@ -1,12 +1,11 @@
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <unistd.h>
+// #include <arpa/inet.h>
+// #include <netinet/in.h>
+// #include <sys/socket.h>
+// #include <unistd.h>
 
-#include <cerrno>
-#include <cstring>
+// #include <cerrno>
+// #include <cstring>
 #include <iostream>
-#include <thread>
 
 #include "../include/bio_utils.hpp"
 #include "../include/handlers.hpp"
@@ -103,7 +102,7 @@ int main(int argc, char *argv[]) {
     std::cout << "Connected to server:\n";
 
     // handlers::serverHandler(sockfd);
-    
+
     handlers::serverHandler(ssl);
 
     SSL_shutdown(ssl);

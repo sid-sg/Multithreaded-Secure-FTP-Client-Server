@@ -5,7 +5,6 @@
 
 #include <iostream>
 
-
 namespace ssl {
 
 SSL_CTX *create_SSLctx();

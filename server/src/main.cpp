@@ -1,13 +1,13 @@
 #include <arpa/inet.h>
-#include <netinet/in.h>
+// #include <netinet/in.h>
 #include <openssl/bio.h>
 #include <signal.h>
 #include <sys/socket.h>
-#include <sys/stat.h>
-#include <sys/types.h>
+// #include <sys/stat.h>
+// #include <sys/types.h>
 
-#include <cerrno>
-#include <cstring>
+// #include <cerrno>
+// #include <cstring>
 #include <thread>
 
 #include "../include/db.hpp"

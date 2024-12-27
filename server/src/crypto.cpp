@@ -70,29 +70,6 @@ std::string Crypto::hashPassword(const std::string& password) {
 }
 
 bool Crypto::verifyPasswords(const std::string& storedHash, const std::string& providedPassword) {
-    // try {
-    //     auto [saltHex, storedHashHex] = decodeResult(storedHash);
-
-    //     // std::vector<unsigned char> salt = toBinary(saltHex);
-    //     // std::vector<unsigned char> storedHash = toBinary(storedHashHex);
-
-    //     std::cout<<"Stored Hash: "<<storedHashHex<<"\n";
-    //     std::cout<<"Salt hex: "<< saltHex;
-
-    //     std::vector<unsigned char> providedHash = pbkdf2(providedPassword, salt);
-
-    //     if (providedHash == storedHash) {
-    //         std::cout << "Correct password\n";
-    //         return true;
-    //     } else {
-    //         std::cout << "Wrong password\n";
-    //         return false;
-    //     }
-    // } catch (const std::exception& e) {
-    //     std::cerr << "Error: " << e.what();
-    //     return false;
-    // }
-
     auto [storedSaltHex, storedHashHex] = decodeResult(storedHash);
 
     std::vector<unsigned char> saltBinary = toBinary(storedSaltHex);
@@ -100,15 +77,15 @@ bool Crypto::verifyPasswords(const std::string& storedHash, const std::string& p
 
     std::string derivedHashHex = toHex(derivedHashBinary);
 
-    std::cout << "StoredSaltHex: " << storedSaltHex << "\n";
-    std::cout << "StoredHashHex: " << storedHashHex << "\n";
-    std::cout << "DerivedHashHex: " << derivedHashHex << "\n";
+    // std::cout << "StoredSaltHex: " << storedSaltHex << "\n";
+    // std::cout << "StoredHashHex: " << storedHashHex << "\n";
+    // std::cout << "DerivedHashHex: " << derivedHashHex << "\n";
 
     if (storedHashHex == derivedHashHex) {
-        std::cout << "correct\n";
+        // std::cout << "correct\n";
         return true;
     } else {
-        std::cout << "wrong\n";
+        // std::cout << "wrong\n";
         return false;
     }
 }

@@ -1,6 +1,6 @@
 #include "progressbar.hpp"
 
-#include <iostream>
+// #include <iostream>
 
 void ProgressBar::print() {
     int progress = static_cast<int>((static_cast<float>(currentStep) / totalSteps) * barWidth);

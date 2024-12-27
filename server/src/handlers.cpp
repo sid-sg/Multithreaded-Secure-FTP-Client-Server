@@ -1,7 +1,7 @@
 #include "../include/handlers.hpp"
 
-#include <sys/socket.h>
-#include <sys/types.h>
+// #include <sys/socket.h>
+// #include <sys/types.h>
 
 #include "../include/db.hpp"
 #include "../include/file_utils.hpp"
@@ -110,7 +110,6 @@ void clientHandler::registerUser() {
     Crypto crypto;
 
     std::string hashedPassword = crypto.hashPassword(password);
-    std::cout << "Hashed password: " << hashedPassword << "\n";
 
     Database db("../data/user.db");
 
@@ -175,7 +174,6 @@ void clientHandler::loginUser() {
         return;
     }
     std::string storedHash = db.getHashedPassword(username);
-    std::cout<<"storegHash: "<<storedHash<<"\n";
 
     if (storedHash.empty()) {
         const std::string errorMsg = "USER_NOT_FOUND";

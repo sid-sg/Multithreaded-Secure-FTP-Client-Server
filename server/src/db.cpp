@@ -1,7 +1,5 @@
 #include "../include/db.hpp"
 
-#include <iostream>
-
 Database::Database(const std::string& dbPath) {
     if (sqlite3_open(dbPath.c_str(), &db) != SQLITE_OK) {
         std::cerr << "Failed to open SQLite database: " << sqlite3_errmsg(db) << std::endl;

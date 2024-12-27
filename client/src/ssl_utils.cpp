@@ -1,8 +1,5 @@
 #include "../include/ssl_utils.hpp"
 
-#include <openssl/bio.h>
-#include <openssl/ssl.h>
-
 namespace ssl {
 
 SSL_CTX *create_SSLctx() {

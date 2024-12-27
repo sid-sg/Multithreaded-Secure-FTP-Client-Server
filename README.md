@@ -2,10 +2,12 @@
 https://github.com/user-attachments/assets/e8572f6c-48f4-42b0-9bf0-2ab010d9eace
 
 # Dependencies
-## OpenSSL: For Secure FTP using SSL/TLS protocol
+## OpenSSL: For Secure FTP using SSL/TLS protocol and PBKDF2 hashing
 `sudo apt-get install openssl libssl-dev`
 ## Zlib: For Gzip compression/decompression
 `sudo apt install zlib1g zlib1g-dev`
+## SQLite3: For storing user info
+`sudo apt install sqlite3 libsqlite3-dev`
 
 # Generate SSL certificate and key for server
 ## Go to /security

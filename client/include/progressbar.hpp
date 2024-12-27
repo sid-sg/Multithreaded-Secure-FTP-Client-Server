@@ -1,6 +1,7 @@
 #ifndef PROGRESSBAR_HPP
 #define PROGRESSBAR_HPP
 
+#include <iostream>
 #include <stdexcept>
 
 class ProgressBar {
