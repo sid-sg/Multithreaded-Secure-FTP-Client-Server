@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
     // close(sockfd);
 
     SSL_CTX *ctx = ssl::create_SSLctx();
-
+    
     SSL *ssl = SSL_new(ctx);
     if (!ssl) {
         std::cerr << "Failed to create the SSL object\n";

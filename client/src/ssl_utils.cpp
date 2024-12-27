@@ -11,14 +11,19 @@ SSL_CTX *create_SSLctx() {
         exit(EXIT_FAILURE);
     }
 
-    // SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
-    SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL);
+    SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER, NULL);
+    // SSL_CTX_set_verify(ctx, SSL_VERIFY_NONE, NULL);
 
     // if (!SSL_CTX_set_default_verify_paths(ctx)) {
     //     std::cerr << "Failed to set the default trusted certificate store\n";
     //     SSL_CTX_free(ctx);
     //     exit(EXIT_FAILURE);
     // }
+    if (!SSL_CTX_load_verify_locations(ctx, "../security/server.crt", NULL)) {
+        std::cerr << "Failed to load server certificate as a trusted certificate\n";
+        SSL_CTX_free(ctx);
+        exit(EXIT_FAILURE);
+    }
 
     if (!SSL_CTX_set_min_proto_version(ctx, TLS1_2_VERSION)) {
         std::cerr << "Failed to set the minimum TLS protocol version\n";
