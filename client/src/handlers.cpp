@@ -30,6 +30,8 @@ void serverHandler(SSL *ssl) {
             continue;
         }
 
+        std::cout<<option<<"\n";
+
         switch (option) {
             case 1:  // register
                 registerUser(ssl);
