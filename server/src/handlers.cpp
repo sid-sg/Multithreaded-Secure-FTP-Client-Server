@@ -3,13 +3,18 @@
 // #include <sys/socket.h>
 // #include <sys/types.h>
 
+#include "../include/crypto.hpp"
 #include "../include/db.hpp"
 #include "../include/file_utils.hpp"
-#include "../include/crypto.hpp"
 
 #define BUFFER_SIZE 4096
 #define CHUNK_SIZE 16384
 std::string folderdir = "\0";
+
+void clientHandler::clientInfo() {
+    std::string prefix = username + ":" + client_ip + ":" + std::to_string(client_port) + " - ";
+    std::cout << prefix;
+}
 
 void clientHandler::handler() {
     std::vector<char> buffer(BUFFER_SIZE, 0);
@@ -19,6 +24,7 @@ void clientHandler::handler() {
 
         int bytesRecv = SSL_read(ssl, buffer.data(), buffer.size() - 1);  // recv option
         if (bytesRecv <= 0) {
+            clientInfo();
             std::cerr << "Client disconnected or error occurred: " << std::strerror(errno) << "\n";
             ERR_print_errors_fp(stderr);
             break;
@@ -27,10 +33,12 @@ void clientHandler::handler() {
         buffer[bytesRecv] = '\0';
         std::string option(buffer.data());
         if (option.empty()) {
+            clientInfo();
             std::cerr << "Empty or invalid option received\n";
             continue;
         }
 
+        clientInfo();
         std::cout << "Option selected: " << option << "\n";
 
         try {
@@ -70,6 +78,7 @@ void clientHandler::registerUser() {
     std::vector<char> buffer(BUFFER_SIZE, 0);
     int bytesRecv = SSL_read(ssl, buffer.data(), buffer.size() - 1);
     if (bytesRecv <= 0) {
+        clientInfo();
         std::cerr << "Failed to receive username: " << std::strerror(errno) << "\n";
         ERR_print_errors_fp(stderr);
         return;
@@ -81,6 +90,7 @@ void clientHandler::registerUser() {
     // recv password
     bytesRecv = SSL_read(ssl, buffer.data(), buffer.size() - 1);
     if (bytesRecv <= 0) {
+        clientInfo();
         std::cerr << "Failed to receive password: " << std::strerror(errno) << "\n";
         ERR_print_errors_fp(stderr);
         return;
@@ -89,11 +99,8 @@ void clientHandler::registerUser() {
     buffer[bytesRecv] = '\0';
     password = buffer.data();
 
-    std::cout << "Received from client: \n";
-    std::cout << "Username: " << username << "\n";
-    std::cout << "Password: " << password << "\n";
-
     if (!std::regex_match(username, usernameRegex)) {
+        clientInfo();
         std::cerr << "Invalid username received: " << username << "\n";
         const std::string errorMsg = "INVALID_USERNAME_REGEX";
         SSL_write(ssl, errorMsg.c_str(), errorMsg.size());
@@ -101,6 +108,7 @@ void clientHandler::registerUser() {
     }
 
     if (!std::regex_match(password, passwordRegex)) {
+        clientInfo();
         std::cerr << "Invalid password received: " << password << "\n";
         const std::string errorMsg = "INVALID_PASSWORD_REGEX";
         SSL_write(ssl, errorMsg.c_str(), errorMsg.size());
@@ -120,6 +128,7 @@ void clientHandler::registerUser() {
     }
 
     if (!db.registerUser(username, hashedPassword)) {
+        clientInfo();
         std::cerr << "Failed to register user\n";
         return;
     }
@@ -127,6 +136,7 @@ void clientHandler::registerUser() {
     folderdir = "../../store/" + username;
 
     if (!utils::ensureDirectory(folderdir)) {
+        clientInfo();
         std::cerr << "Failed to create store directory\n";
         return;
     }
@@ -134,11 +144,13 @@ void clientHandler::registerUser() {
     // send ACK
     const std::string ack = "OK";
     if (SSL_write(ssl, ack.c_str(), ack.size()) <= 0) {
+        clientInfo();
         std::cerr << "Failed to send ACK: " << std::strerror(errno) << "\n";
         ERR_print_errors_fp(stderr);
         return;
     }
 
+    clientInfo();
     std::cout << "User registered successfully: " << username << "\n";
 }
 
@@ -149,6 +161,7 @@ void clientHandler::loginUser() {
     std::vector<char> buffer(BUFFER_SIZE, 0);
     int bytesRecv = SSL_read(ssl, buffer.data(), buffer.size() - 1);
     if (bytesRecv <= 0) {
+        clientInfo();
         std::cerr << "Failed to receive username: " << std::strerror(errno) << "\n";
         ERR_print_errors_fp(stderr);
         return;
@@ -160,6 +173,7 @@ void clientHandler::loginUser() {
     // recv password
     bytesRecv = SSL_read(ssl, buffer.data(), buffer.size() - 1);
     if (bytesRecv <= 0) {
+        clientInfo();
         std::cerr << "Failed to receive password: " << std::strerror(errno) << "\n";
         ERR_print_errors_fp(stderr);
         return;
@@ -183,9 +197,9 @@ void clientHandler::loginUser() {
 
     Crypto crypto;
 
-    if ( !crypto.verifyPasswords(storedHash, password) ) {
+    if (!crypto.verifyPasswords(storedHash, password)) {
         const std::string errorMsg = "WRONG_PASSWORD";
-        std::cout<<errorMsg<<"\n";
+        std::cout << errorMsg << "\n";
         SSL_write(ssl, errorMsg.c_str(), errorMsg.size());
         return;
     }
@@ -193,16 +207,19 @@ void clientHandler::loginUser() {
     folderdir = "../../store/" + username;
 
     if (!utils::ensureDirectory(folderdir)) {
+        clientInfo();
         std::cerr << "Failed to create store directory\n";
         return;
     }
 
     isLoggedin = true;
+    this->username = username;
 
     // Send ack
     const std::string ack = "LOGIN_SUCCESS";
     SSL_write(ssl, ack.c_str(), ack.size());
 
+    clientInfo();
     std::cout << "User logged in successfully: " << username << "\n";
 }
 
@@ -210,6 +227,7 @@ void clientHandler::sendLoggedInStatus() {
     if (isLoggedin) {
         const std::string ack = "LOGIN_SUCCESS";
         if (SSL_write(ssl, ack.c_str(), ack.size()) <= 0) {
+            clientInfo();
             std::cerr << "Failed to send ACK: " << std::strerror(errno) << "\n";
             ERR_print_errors_fp(stderr);
             return;
@@ -217,6 +235,7 @@ void clientHandler::sendLoggedInStatus() {
     } else {
         const std::string ack = "LOGIN_FAIL";
         if (SSL_write(ssl, ack.c_str(), ack.size()) <= 0) {
+            clientInfo();
             std::cerr << "Failed to send ACK: " << std::strerror(errno) << "\n";
             ERR_print_errors_fp(stderr);
             return;
@@ -229,9 +248,11 @@ void clientHandler::sendLoggedInStatus() {
 void clientHandler::listFiles() {
     sendLoggedInStatus();
     if (!isLoggedin) {
+        clientInfo();
         std::cout << "User not logged in\n";
         return;
     }
+    clientInfo();
     std::cout << "user logged in\n";
 
     std::string files = utils::ls(folderdir);
@@ -246,6 +267,7 @@ void clientHandler::listFiles() {
 
     size_t totalSize = buffer.size();
     size_t bytesSent = 0;
+    clientInfo();
     std::cout << "Sending directory files to client...\n";
 
     // send files list in chunk
@@ -254,6 +276,7 @@ void clientHandler::listFiles() {
         ssize_t result = SSL_write(ssl, buffer.data() + bytesSent, chunkSize);
 
         if (result == -1) {
+            clientInfo();
             std::cerr << "Failed to send directory files: " << std::strerror(errno) << "\n";
             ERR_print_errors_fp(stderr);
             SSL_shutdown(ssl);
@@ -264,15 +287,18 @@ void clientHandler::listFiles() {
         bytesSent += result;
     }
 
+    clientInfo();
     std::cout << "Successfully sent directory files to client.\n";
 }
 
 void clientHandler::uploadFile() {
     sendLoggedInStatus();
     if (!isLoggedin) {
+        clientInfo();
         std::cout << "User not logged in\n";
         return;
     }
+    clientInfo();
     std::cout << "user logged in\n";
 
     std::vector<char> buffer(BUFFER_SIZE, 0);
@@ -280,6 +306,7 @@ void clientHandler::uploadFile() {
     // recv file metadata (filename:filesize)
     int bytesRecv = SSL_read(ssl, buffer.data(), buffer.size());
     if (bytesRecv <= 0) {
+        clientInfo();
         std::cerr << "Client disconnected or error receiving metadata: " << std::strerror(errno) << "\n";
         return;
     }
@@ -289,6 +316,7 @@ void clientHandler::uploadFile() {
     // Validate and parse metadata
     size_t partition = metadata.find(":");
     if (partition == std::string::npos) {
+        clientInfo();
         std::cerr << "Invalid metadata format received from client\n";
         return;
     }
@@ -299,6 +327,7 @@ void clientHandler::uploadFile() {
     // validate filename
     std::regex validFilenameRegex("^[a-zA-Z0-9._-]+$");
     if (!std::regex_match(filename, validFilenameRegex)) {
+        clientInfo();
         std::cerr << "Invalid filename received: " << filename << "\n";
         return;
     }
@@ -311,15 +340,19 @@ void clientHandler::uploadFile() {
             throw std::invalid_argument("Filesize must be positive");
         }
     } catch (const std::exception& e) {
+        clientInfo();
         std::cerr << "Invalid filesize received: " << filesizeStr << " (" << e.what() << ")\n";
         return;
     }
 
+    clientInfo();
     std::cout << "Filename: " << filename << "\n";
+    clientInfo();
     std::cout << "Filesize: " << filesize << " bytes\n";
 
     // send ACK
     if (SSL_write(ssl, "OK", 2) <= 0) {
+        clientInfo();
         std::cerr << "Failed sending ACK: " << std::strerror(errno) << "\n";
         ERR_print_errors_fp(stderr);
         return;
@@ -329,6 +362,7 @@ void clientHandler::uploadFile() {
     std::string compressedFilepath = folderdir + "/" + filename + ".gz";
     gzFile compressedfile = gzopen(compressedFilepath.c_str(), "wb");
     if (!compressedfile) {
+        clientInfo();
         std::cerr << "Failed to create compressed file: " << std::strerror(errno) << "\n";
         return;
     }
@@ -341,6 +375,7 @@ void clientHandler::uploadFile() {
         int chunkSize = std::min(remaining, BUFFER_SIZE);
         bytesRecv = SSL_read(ssl, buffer.data(), chunkSize);
         if (bytesRecv <= 0) {
+            clientInfo();
             std::cerr << "Client disconnected during file transfer: " << std::strerror(errno) << "\n";
             ERR_print_errors_fp(stderr);
             gzclose(compressedfile);
@@ -350,6 +385,7 @@ void clientHandler::uploadFile() {
         // write to compressed file
         int bytesWritten = gzwrite(compressedfile, buffer.data(), bytesRecv);
         if (bytesWritten != bytesRecv) {
+            clientInfo();
             std::cerr << "Error writing to compressed file\n";
             gzclose(compressedfile);
             return;
@@ -359,21 +395,25 @@ void clientHandler::uploadFile() {
     }
 
     gzclose(compressedfile);
+    clientInfo();
     std::cout << "File received and saved to " << compressedFilepath << "\n";
 }
 
 void clientHandler::downloadFile() {
     sendLoggedInStatus();
     if (!isLoggedin) {
+        clientInfo();
         std::cout << "User not logged in\n";
         return;
     }
+    clientInfo();
     std::cout << "user logged in\n";
     std::vector<char> buffer(BUFFER_SIZE, 0);
 
     // Receive filename
     int bytesRecv = SSL_read(ssl, buffer.data(), buffer.size());
     if (bytesRecv <= 0) {
+        clientInfo();
         std::cerr << "Client disconnected or error receiving filename: " << std::strerror(errno) << "\n";
         ERR_print_errors_fp(stderr);
         return;
@@ -385,9 +425,11 @@ void clientHandler::downloadFile() {
 
     int filefd = open(filepath.c_str(), O_RDONLY);
     if (filefd == -1) {
+        clientInfo();
         std::cerr << "File not found: " << filename << "\n";
         std::string errorMsg = "ERROR: File Not Found";
         if (SSL_write(ssl, errorMsg.c_str(), errorMsg.size()) <= 0) {
+            clientInfo();
             std::cerr << "Failed to send error message to client: " << std::strerror(errno) << "\n";
             ERR_print_errors_fp(stderr);
         }
@@ -396,6 +438,7 @@ void clientHandler::downloadFile() {
 
     off_t filesize = utils::getFilesize(filefd);
     if (filesize == -1) {
+        clientInfo();
         std::cerr << "Failed to get file size: " << std::strerror(errno) << "\n";
         close(filefd);
         return;
@@ -404,6 +447,7 @@ void clientHandler::downloadFile() {
     // Send filesize
     std::string fileSizeMsg = std::to_string(filesize);
     if (SSL_write(ssl, fileSizeMsg.c_str(), fileSizeMsg.size()) <= 0) {
+        clientInfo();
         std::cerr << "Failed to send compressed file size: " << std::strerror(errno) << "\n";
         ERR_print_errors_fp(stderr);
         close(filefd);
@@ -414,6 +458,7 @@ void clientHandler::downloadFile() {
     buffer.assign(BUFFER_SIZE, 0);
     bytesRecv = SSL_read(ssl, buffer.data(), 2);  // Expecting "OK"
     if (bytesRecv <= 0 || std::string(buffer.data(), bytesRecv) != "OK") {
+        clientInfo();
         std::cerr << "Client failed to ACK file size: " << std::strerror(errno) << "\n";
         ERR_print_errors_fp(stderr);
         close(filefd);
@@ -423,8 +468,10 @@ void clientHandler::downloadFile() {
     // Check if Kernel TLS is enabled
     bool isKernelTLS = (BIO_get_ktls_send(SSL_get_rbio(ssl)) > 0);
     if (isKernelTLS) {
+        clientInfo();
         std::cerr << "Kernel TLS enabled, using SSL_sendfile for download\n";
     } else {
+        clientInfo();
         std::cerr << "Kernel TLS not enabled, falling back to read + SSL_write\n";
     }
 
@@ -449,6 +496,7 @@ void clientHandler::downloadFile() {
         }
 
         if (bytesSent <= 0) {
+            clientInfo();
             std::cerr << "Failed to send file: " << std::strerror(errno) << "\n";
             ERR_print_errors_fp(stderr);
             close(filefd);
@@ -458,6 +506,7 @@ void clientHandler::downloadFile() {
         bytesRemaining -= bytesSent;
     }
 
+    clientInfo();
     std::cout << "Compressed file sent to client successfully.\n";
 
     close(filefd);
@@ -466,9 +515,11 @@ void clientHandler::downloadFile() {
 void clientHandler::renameFile() {
     sendLoggedInStatus();
     if (!isLoggedin) {
+        clientInfo();
         std::cout << "User not logged in\n";
         return;
     }
+    clientInfo();
     std::cout << "user logged in\n";
     std::vector<char> buffer(BUFFER_SIZE, 0);
 
@@ -476,8 +527,10 @@ void clientHandler::renameFile() {
     int bytesRecv = SSL_read(ssl, buffer.data(), buffer.size());
     if (bytesRecv <= 0) {
         if (bytesRecv == 0) {
+            clientInfo();
             std::cerr << "Client disconnected while receiving metadata.\n";
         } else {
+            clientInfo();
             std::cerr << "Error receiving metadata: " << std::strerror(errno) << "\n";
             ERR_print_errors_fp(stderr);
         }
@@ -488,9 +541,11 @@ void clientHandler::renameFile() {
 
     std::string::size_type partition = metadata.find(":");
     if (partition == std::string::npos) {
+        clientInfo();
         std::cerr << "Invalid metadata received: " << metadata << "\n";
         std::string errorMsg = "ERROR: Invalid metadata format";
         if (SSL_write(ssl, errorMsg.c_str(), errorMsg.size()) <= 0) {
+            clientInfo();
             std::cerr << "Failed to send error message to client: " << std::strerror(errno) << "\n";
             ERR_print_errors_fp(stderr);
         }
@@ -503,14 +558,18 @@ void clientHandler::renameFile() {
     std::string filepath = folderdir + "/" + filename + ".gz";
     std::string newpath = folderdir + "/" + newname + ".gz";
 
+    clientInfo();
     std::cout << "Old path: " << filepath << "\n";
+    clientInfo();
     std::cout << "New path: " << newpath << "\n";
 
     // Rename file
     if (rename(filepath.c_str(), newpath.c_str()) != 0) {
+        clientInfo();
         std::cerr << "Failed to rename file: " << std::strerror(errno) << "\n";
         std::string errorMsg = "ERROR: Failed to rename file";
         if (SSL_write(ssl, errorMsg.c_str(), errorMsg.size()) <= 0) {
+            clientInfo();
             std::cerr << "Failed to send error message to client: " << std::strerror(errno) << "\n";
             ERR_print_errors_fp(stderr);
         }
@@ -520,28 +579,34 @@ void clientHandler::renameFile() {
     // Send success response
     std::string successMsg = "SUCCESS";
     if (SSL_write(ssl, successMsg.c_str(), successMsg.size()) <= 0) {
+        clientInfo();
         std::cerr << "Failed to send success message: " << std::strerror(errno) << "\n";
         ERR_print_errors_fp(stderr);
         return;
     }
 
+    clientInfo();
     std::cout << "File renamed successfully.\n";
 }
 
 void clientHandler::deleteFile() {
     sendLoggedInStatus();
     if (!isLoggedin) {
+        clientInfo();
         std::cout << "User not logged in\n";
         return;
     }
+    clientInfo();
     std::cout << "user logged in\n";
     // Receive filename
     std::vector<char> buffer(BUFFER_SIZE, 0);
     int bytesRecv = SSL_read(ssl, buffer.data(), buffer.size());
     if (bytesRecv <= 0) {
         if (bytesRecv == 0) {
+            clientInfo();
             std::cerr << "Client disconnected while receiving filename.\n";
         } else {
+            clientInfo();
             std::cerr << "Error receiving filename: " << std::strerror(errno) << "\n";
             ERR_print_errors_fp(stderr);
         }
@@ -554,9 +619,11 @@ void clientHandler::deleteFile() {
 
     // Delete file
     if (remove(filepath.c_str()) != 0) {
+        clientInfo();
         std::cerr << "Failed to delete file: " << std::strerror(errno) << "\n";
         std::string errorMsg = "ERROR: Failed to delete file";
         if (SSL_write(ssl, errorMsg.c_str(), errorMsg.size()) <= 0) {
+            clientInfo();
             std::cerr << "Failed to send error message to client: " << std::strerror(errno) << "\n";
             ERR_print_errors_fp(stderr);
         }
@@ -566,10 +633,12 @@ void clientHandler::deleteFile() {
     // Send success response
     std::string successMsg = "SUCCESS";
     if (SSL_write(ssl, successMsg.c_str(), successMsg.size()) <= 0) {
+        clientInfo();
         std::cerr << "Failed to send success message: " << std::strerror(errno) << "\n";
         ERR_print_errors_fp(stderr);
         return;
     }
 
+    clientInfo();
     std::cout << "File successfully deleted: " << filepath << "\n";
 }

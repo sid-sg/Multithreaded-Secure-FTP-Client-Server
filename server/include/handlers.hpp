@@ -23,12 +23,16 @@ class clientHandler {
     bool isLoggedin;
     std::string username;
     std::string folderdir;
+    std::string client_ip;
+    int client_port;
+
+    void clientInfo();
+    void sendLoggedInStatus();
 
    public:
-    clientHandler(SSL* ssl) : ssl(ssl), isLoggedin(false){};
+    clientHandler(SSL* ssl, const std::string client_ip, int client_port) : ssl(ssl), client_ip(client_ip), client_port(client_port), isLoggedin(false){};
     void handler();
     void registerUser();
-    void sendLoggedInStatus();
     void loginUser();
     void listFiles();
     void uploadFile();

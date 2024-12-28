@@ -26,10 +26,10 @@ const char* PORT;
 int main(int argc, char* argv[]) {
     signal(SIGPIPE, SIG_IGN);
 
-    if (!utils::isRoot()) {
-        std::cerr << "This program must be run as root/sudo user\n";
-        return 1;
-    }
+    // if (!utils::isRoot()) {
+    //     std::cerr << "This program must be run as root/sudo user\n";
+    //     return 1;
+    // }
 
     SSL_CTX* ctx = ssl::create_SSLctx("../security/server.crt", "../security/server.key");
 
@@ -178,9 +178,9 @@ int main(int argc, char* argv[]) {
 
         printf("SSL handshake success with client from IP: %s, Port: %d\n", client_ip, client_port);
 
-        pool.enqueueTask([ssl]() {
+        pool.enqueueTask([ssl, client_ip, client_port]() {
             try {
-                clientHandler handler(ssl);
+                clientHandler handler(ssl, client_ip, client_port);
                 handler.handler();
             } catch (const std::exception& e) {
                 std::cerr << "Exception in client handler: " << e.what() << "\n";

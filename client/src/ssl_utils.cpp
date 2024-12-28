@@ -19,7 +19,7 @@ SSL_CTX *create_SSLctx() {
     //     SSL_CTX_free(ctx);
     //     exit(EXIT_FAILURE);
     // }
-    if (!SSL_CTX_load_verify_locations(ctx, "../security/server.crt", NULL)) {
+    if (!SSL_CTX_load_verify_locations(ctx, "/home/sid/projects/chatapp/client/security/server.crt", NULL)) {
         std::cerr << "Failed to load server certificate as a trusted certificate\n";
         SSL_CTX_free(ctx);
         exit(EXIT_FAILURE);

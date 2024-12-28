@@ -73,6 +73,7 @@ void serverHandler(SSL *ssl) {
 }
 
 void registerUser(SSL *ssl) {
+    std::cout<<"Registering user\n";
     // send register req
     const std::string registerRequest = "register";
     if (SSL_write(ssl, registerRequest.c_str(), registerRequest.size()) <= 0) {
@@ -138,6 +139,7 @@ void registerUser(SSL *ssl) {
 }
 
 void loginUser(SSL *ssl) {
+    std::cout<<"Log in\n";
     // send login req
     const std::string uploadRequest = "login";
     if (SSL_write(ssl, uploadRequest.c_str(), uploadRequest.size()) <= 0) {
@@ -211,6 +213,7 @@ bool checkLoggedIn(SSL *ssl) {
 // function only performed if client is logged-in
 
 void listFiles(SSL *ssl) {
+    std::cout<<"List files\n";
     const std::string command = "ls";
     if (SSL_write(ssl, command.c_str(), command.size()) == -1) {
         std::cerr << "Failed to send command: " << std::strerror(errno) << "\n";
@@ -239,6 +242,8 @@ void listFiles(SSL *ssl) {
 }
 
 void uploadFile(SSL *ssl) {
+    std::cout<<"Upload file\n";
+
     std::string pathname;
     std::cout << "Enter file pathname: \n";
     std::cin >> pathname;
@@ -362,6 +367,8 @@ void uploadFile(SSL *ssl) {
 }
 
 void downloadFile(SSL *ssl) {
+    std::cout<<"Download file\n";
+
     std::string buffer = "download";
     // send download req
     int bytesSent = SSL_write(ssl, buffer.c_str(), buffer.length());
@@ -503,6 +510,8 @@ void downloadFile(SSL *ssl) {
 }
 
 void renameFile(SSL *ssl) {
+    std::cout<<"Rename file\n";
+
     // send rename req
     const std::string buffer = "rename";
     if (SSL_write(ssl, buffer.c_str(), buffer.length()) <= 0) {
@@ -558,6 +567,8 @@ void renameFile(SSL *ssl) {
 }
 
 void deleteFile(SSL *ssl) {
+    std::cout<<"Delete file\n";
+
     // send delete req
     const std::string buffer = "delete";
     if (SSL_write(ssl, buffer.c_str(), buffer.length()) <= 0) {
