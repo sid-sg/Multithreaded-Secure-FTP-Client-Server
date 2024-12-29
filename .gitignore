@@ -7,3 +7,4 @@ server.csr
 server.crt
 
 *.db
+*.log
