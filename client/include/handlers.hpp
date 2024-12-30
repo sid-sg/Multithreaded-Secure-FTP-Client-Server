@@ -5,9 +5,11 @@
 #include <openssl/err.h>
 #include <openssl/ssl.h>
 // #include <sys/sendfile.h>
-// #include <sys/socket.h>
+#include <sys/socket.h>
 // #include <sys/stat.h>
-// #include <sys/types.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <sys/types.h>
 // #include <unistd.h>
 #include <zlib.h>
 
@@ -17,8 +19,11 @@
 #include <regex>
 #include <vector>
 
-const std::regex passwordRegex("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)[a-zA-Z\\d]{8,}$");  // Contains at least one lowercase letter, one uppercase letter, one digit, and is at least 8 characters long
-const std::regex usernameRegex("^[a-zA-Z0-9._-]+$");                                 // Contains only alphanumeric characters, underscores, and hyphens
+// Contains at least one lowercase letter, one uppercase letter, one digit, and is at least 8 characters long
+const std::regex passwordRegex("^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[!@#$%^&*(),.?\":{}|<>])[a-zA-Z\\d!@#$%^&*(),.?\":{}|<>]{8,}$");
+
+// Contains only alphanumeric characters, underscores, and hyphens
+const std::regex usernameRegex("^[a-zA-Z0-9._-]+$");
 
 namespace handlers {
 void serverHandler(SSL *ssl);

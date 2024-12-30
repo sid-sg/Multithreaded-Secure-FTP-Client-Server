@@ -8,3 +8,4 @@ server.crt
 
 *.db
 *.log
+benchmark.md

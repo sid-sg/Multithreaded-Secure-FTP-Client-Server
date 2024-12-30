@@ -88,6 +88,8 @@ void registerUser(SSL *ssl) {
     std::cout << "Enter username: ";
     std::cin >> username;
 
+// Contains at least one lowercase letter, one uppercase letter, one digit, and is at least 8 characters long
+    std::cout << "\nPassword pattern: \n1. at least one lowercase letter, \n2. at least one uppercase letter, \n3. at least one digit, \n4. at least 8 characters long\n\n";
     std::cout << "Enter password: ";
     std::cin >> password;
 
@@ -274,6 +276,8 @@ void uploadFile(SSL *ssl) {
         return;
     }
 
+
+
     std::string filename = pathname.substr(pathname.find_last_of("/") + 1);
 
     off_t filesize = lseek(filefd, 0, SEEK_END);
@@ -321,6 +325,15 @@ void uploadFile(SSL *ssl) {
         std::cerr << "Kernel TLS not enabled, falling back to read + SSL_write for file upload\n";
     }
 
+    //enable TCP_CORK
+    int cork_flag = 1;
+    int client_fd;
+    client_fd = SSL_get_fd(ssl);
+    if (setsockopt(client_fd, IPPROTO_TCP, TCP_CORK, &cork_flag, sizeof(cork_flag)) == -1) {
+        std::cerr << "Failed to enable TCP_CORK: " << std::strerror(errno) << "\n";
+    }
+    std::cout<<"Enabled TCP_CORK\n";
+
     // inti progress bar
     const int totalSteps = 100;
     ProgressBar progressBar(totalSteps);
@@ -366,6 +379,13 @@ void uploadFile(SSL *ssl) {
 
     std::cout << "\nFile sent and compressed successfully in " << duration.count() << " seconds\n";
     close(filefd);
+
+    //disable TCP_CORK
+    cork_flag = 0;
+    if (setsockopt(client_fd, IPPROTO_TCP, TCP_CORK, &cork_flag, sizeof(cork_flag)) == -1) {
+        std::cerr << "Failed to disable TCP_CORK: " << std::strerror(errno) << "\n";
+    }
+    std::cout<<"Disabled TCP_CORK\n";
 }
 
 void downloadFile(SSL *ssl) {

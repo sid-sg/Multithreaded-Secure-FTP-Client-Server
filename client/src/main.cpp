@@ -5,6 +5,11 @@
 
 // #include <cerrno>
 // #include <cstring>
+#include <netinet/tcp.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <sys/types.h>
+
 #include <iostream>
 
 #include "../include/bio_utils.hpp"
@@ -52,7 +57,7 @@ int main(int argc, char *argv[]) {
     // close(sockfd);
 
     SSL_CTX *ctx = ssl::create_SSLctx();
-    
+
     SSL *ssl = SSL_new(ctx);
     if (!ssl) {
         std::cerr << "Failed to create the SSL object\n";
@@ -86,6 +91,15 @@ int main(int argc, char *argv[]) {
         SSL_CTX_free(ctx);
         exit(EXIT_FAILURE);
     }
+
+    int nodelay_flag = 1;
+    int client_fd;
+    client_fd = SSL_get_fd(ssl);
+    if (setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &nodelay_flag, sizeof(nodelay_flag)) == -1) {
+        std::cerr << "Failed to enable TCP_NODELAY: " << std::strerror(errno) << "\n";
+    }
+    std::cout<<"Disabled Nagles' algorithm\n";
+
     /* Do the handshake with the server */
     if (SSL_connect(ssl) < 1) {
         std::cerr << "Failed to connect to the server\n";

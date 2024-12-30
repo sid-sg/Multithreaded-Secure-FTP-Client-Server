@@ -10,6 +10,7 @@
 #define BUFFER_SIZE 4096
 #define CHUNK_SIZE 16384
 std::string folderdir = "\0";
+std::unordered_map<std::string, std::mutex> clientHandler::folderLocks;
 
 void clientHandler::clientInfo() {
     std::string prefix = username + ":" + client_ip + ":" + std::to_string(client_port) + " - ";
@@ -299,7 +300,8 @@ void clientHandler::uploadFile() {
         return;
     }
     clientInfo();
-    std::cout << "user logged in\n";
+    std::lock_guard<std::mutex> lock(folderLocks[username]);
+
 
     std::vector<char> buffer(BUFFER_SIZE, 0);
 
@@ -475,6 +477,15 @@ void clientHandler::downloadFile() {
         std::cerr << "Kernel TLS not enabled, falling back to read + SSL_write\n";
     }
 
+    //enable TCP_CORK
+    int cork_flag = 1;
+    int server_fd;
+    server_fd = SSL_get_fd(ssl);
+    if (setsockopt(server_fd, IPPROTO_TCP, TCP_CORK, &cork_flag, sizeof(cork_flag)) == -1) {
+        std::cerr << "Failed to enable TCP_CORK: " << std::strerror(errno) << "\n";
+    }
+    std::cout<<"Enabled TCP_CORK\n";
+
     // Send file in chunks
     off_t totalBytesSent = 0;
     off_t bytesRemaining = filesize;
@@ -510,6 +521,13 @@ void clientHandler::downloadFile() {
     std::cout << "Compressed file sent to client successfully.\n";
 
     close(filefd);
+
+    //disable TCP_CORK
+    cork_flag = 0;
+    if (setsockopt(server_fd, IPPROTO_TCP, TCP_CORK, &cork_flag, sizeof(cork_flag)) == -1) {
+        std::cerr << "Failed to disable TCP_CORK: " << std::strerror(errno) << "\n";
+    }
+    std::cout<<"Disabled TCP_CORK\n";
 }
 
 void clientHandler::renameFile() {
@@ -520,7 +538,7 @@ void clientHandler::renameFile() {
         return;
     }
     clientInfo();
-    std::cout << "user logged in\n";
+    std::lock_guard<std::mutex> lock(folderLocks[username]);
     std::vector<char> buffer(BUFFER_SIZE, 0);
 
     // Receive file metadata
@@ -597,7 +615,7 @@ void clientHandler::deleteFile() {
         return;
     }
     clientInfo();
-    std::cout << "user logged in\n";
+    std::lock_guard<std::mutex> lock(folderLocks[username]);
     // Receive filename
     std::vector<char> buffer(BUFFER_SIZE, 0);
     int bytesRecv = SSL_read(ssl, buffer.data(), buffer.size());

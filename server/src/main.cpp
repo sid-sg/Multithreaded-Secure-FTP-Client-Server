@@ -1,10 +1,11 @@
 #include <arpa/inet.h>
-// #include <netinet/in.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <openssl/bio.h>
 #include <signal.h>
 #include <sys/socket.h>
 // #include <sys/stat.h>
-// #include <sys/types.h>
+#include <sys/types.h>
 
 // #include <cerrno>
 // #include <cstring>
@@ -105,6 +106,16 @@ int main(int argc, char* argv[]) {
         SSL_CTX_free(ctx);
         exit(EXIT_FAILURE);
     }
+
+    int server_fd;
+    BIO_get_fd(acceptor_bio, &server_fd);
+    int nodelay_flag = 1;
+
+    if (setsockopt(server_fd, IPPROTO_TCP, TCP_NODELAY, (char*)&nodelay_flag, sizeof(nodelay_flag)) == -1) {
+        std::cerr << "Failed to set TCP_NODELAY: " << std::strerror(errno) << "\n";
+    }
+
+    std::cout<<"Disabled Nagle's algorithm\n";
 
     std::cout << "Server listening on port: " << PORT << "\n";
 
