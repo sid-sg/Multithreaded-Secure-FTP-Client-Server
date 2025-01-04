@@ -2,6 +2,7 @@
 #define SSL_UTILS_HPP
 
 #include <openssl/ssl.h>
+#include <unistd.h>
 
 #include <iostream>
 
