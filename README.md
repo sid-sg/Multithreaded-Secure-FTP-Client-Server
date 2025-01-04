@@ -20,6 +20,10 @@ sudo apt install zlib1g zlib1g-dev
 ```bash
 sudo apt install sqlite3 libsqlite3-dev
 ```
+### Cmake (For building the project)
+```bash
+sudo apt install cmake
+```
 
 ---
 

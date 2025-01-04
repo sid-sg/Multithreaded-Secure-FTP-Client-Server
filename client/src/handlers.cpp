@@ -30,7 +30,7 @@ void serverHandler(SSL *ssl) {
             continue;
         }
 
-        std::cout<<option<<"\n";
+        std::cout << option << "\n";
 
         switch (option) {
             case 1:  // register
@@ -75,7 +75,7 @@ void serverHandler(SSL *ssl) {
 }
 
 void registerUser(SSL *ssl) {
-    std::cout<<"Registering user\n";
+    std::cout << "Registering user\n";
     // send register req
     const std::string registerRequest = "register";
     if (SSL_write(ssl, registerRequest.c_str(), registerRequest.size()) <= 0) {
@@ -88,7 +88,7 @@ void registerUser(SSL *ssl) {
     std::cout << "Enter username: ";
     std::cin >> username;
 
-// Contains at least one lowercase letter, one uppercase letter, one digit, and is at least 8 characters long
+    // Contains at least one lowercase letter, one uppercase letter, one digit, and is at least 8 characters long
     std::cout << "\nPassword pattern: \n1. at least one lowercase letter, \n2. at least one uppercase letter, \n3. at least one digit, \n4. at least 8 characters long\n\n";
     std::cout << "Enter password: ";
     std::cin >> password;
@@ -143,7 +143,7 @@ void registerUser(SSL *ssl) {
 }
 
 void loginUser(SSL *ssl) {
-    std::cout<<"Log in\n";
+    std::cout << "Log in\n";
     // send login req
     const std::string uploadRequest = "login";
     if (SSL_write(ssl, uploadRequest.c_str(), uploadRequest.size()) <= 0) {
@@ -206,7 +206,7 @@ bool checkLoggedIn(SSL *ssl) {
         }
         return false;
     }
-    std::string response(ackBuffer.data(), bytesRecv);   
+    std::string response(ackBuffer.data(), bytesRecv);
     if (response != "LOGIN_SUCCESS") {
         std::cerr << "Error: User not logged in. Please login first.\n";
         return false;
@@ -217,7 +217,7 @@ bool checkLoggedIn(SSL *ssl) {
 // function only performed if client is logged-in
 
 void listFiles(SSL *ssl) {
-    std::cout<<"List files\n";
+    std::cout << "List files\n";
     const std::string command = "ls";
     if (SSL_write(ssl, command.c_str(), command.size()) == -1) {
         std::cerr << "Failed to send command: " << std::strerror(errno) << "\n";
@@ -246,7 +246,7 @@ void listFiles(SSL *ssl) {
 }
 
 void uploadFile(SSL *ssl) {
-    std::cout<<"Upload file\n";
+    std::cout << "Upload file\n";
 
     std::string pathname;
     std::cout << "Enter file pathname: \n";
@@ -275,8 +275,6 @@ void uploadFile(SSL *ssl) {
     if (!checkLoggedIn(ssl)) {
         return;
     }
-
-
 
     std::string filename = pathname.substr(pathname.find_last_of("/") + 1);
 
@@ -325,14 +323,21 @@ void uploadFile(SSL *ssl) {
         std::cerr << "Kernel TLS not enabled, falling back to read + SSL_write for file upload\n";
     }
 
-    //enable TCP_CORK
-    int cork_flag = 1;
+    // disable TCP_NODELAY
+    int nodelay_flag = 0;
     int client_fd;
     client_fd = SSL_get_fd(ssl);
-    if (setsockopt(client_fd, IPPROTO_TCP, TCP_CORK, &cork_flag, sizeof(cork_flag)) == -1) {
-        std::cerr << "Failed to enable TCP_CORK: " << std::strerror(errno) << "\n";
+    if (setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &nodelay_flag, sizeof(nodelay_flag)) == -1) {
+        std::cerr << "Failed to disable TCP_NODELAY (enable nagles's algo) : " << std::strerror(errno) << "\n";
     }
-    std::cout<<"Enabled TCP_CORK\n";
+    std::cout << "Disabled TCP_NODELAY (Enabled Nagle's algo)\n";
+
+    // // enable TCP_CORK
+    // int cork_flag = 1;
+    // if (setsockopt(client_fd, IPPROTO_TCP, TCP_CORK, &cork_flag, sizeof(cork_flag)) == -1) {
+    //     std::cerr << "Failed to enable TCP_CORK: " << std::strerror(errno) << "\n";
+    // }
+    // std::cout << "Enabled TCP_CORK\n";
 
     // inti progress bar
     const int totalSteps = 100;
@@ -380,16 +385,23 @@ void uploadFile(SSL *ssl) {
     std::cout << "\nFile sent and compressed successfully in " << duration.count() << " seconds\n";
     close(filefd);
 
-    //disable TCP_CORK
-    cork_flag = 0;
-    if (setsockopt(client_fd, IPPROTO_TCP, TCP_CORK, &cork_flag, sizeof(cork_flag)) == -1) {
-        std::cerr << "Failed to disable TCP_CORK: " << std::strerror(errno) << "\n";
+    // // disable TCP_CORK
+    // cork_flag = 0;
+    // if (setsockopt(client_fd, IPPROTO_TCP, TCP_CORK, &cork_flag, sizeof(cork_flag)) == -1) {
+    //     std::cerr << "Failed to disable TCP_CORK: " << std::strerror(errno) << "\n";
+    // }
+    // std::cout << "Disabled TCP_CORK\n";
+
+    // enable TCP_NODELAY
+    nodelay_flag = 1;
+    if (setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &nodelay_flag, sizeof(nodelay_flag)) == -1) {
+        std::cerr << "Failed to elable TCP_NODELAY (disable nagles's algo) : " << std::strerror(errno) << "\n";
     }
-    std::cout<<"Disabled TCP_CORK\n";
+    std::cout << "Enabled TCP_NODELAY (Disabled Nagle's algo)\n";
 }
 
 void downloadFile(SSL *ssl) {
-    std::cout<<"Download file\n";
+    std::cout << "Download file\n";
 
     std::string buffer = "download";
     // send download req
@@ -532,7 +544,7 @@ void downloadFile(SSL *ssl) {
 }
 
 void renameFile(SSL *ssl) {
-    std::cout<<"Rename file\n";
+    std::cout << "Rename file\n";
 
     // send rename req
     const std::string buffer = "rename";
@@ -589,7 +601,7 @@ void renameFile(SSL *ssl) {
 }
 
 void deleteFile(SSL *ssl) {
-    std::cout<<"Delete file\n";
+    std::cout << "Delete file\n";
 
     // send delete req
     const std::string buffer = "delete";
