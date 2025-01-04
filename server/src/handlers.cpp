@@ -302,7 +302,6 @@ void clientHandler::uploadFile() {
     clientInfo();
     std::lock_guard<std::mutex> lock(folderLocks[username]);
 
-
     std::vector<char> buffer(BUFFER_SIZE, 0);
 
     // recv file metadata (filename:filesize)
@@ -326,6 +325,8 @@ void clientHandler::uploadFile() {
     std::string filename = metadata.substr(0, partition);
     std::string filesizeStr = metadata.substr(partition + 1);
 
+    std::cout << "filesizeStr: " << filesizeStr << std::endl;
+
     // validate filename
     std::regex validFilenameRegex("^[a-zA-Z0-9._-]+$");
     if (!std::regex_match(filename, validFilenameRegex)) {
@@ -335,7 +336,7 @@ void clientHandler::uploadFile() {
     }
 
     // validate filesize
-    int filesize = 0;
+    off_t filesize = 0;
     try {
         filesize = std::stoull(filesizeStr);
         if (filesize <= 0) {
@@ -370,11 +371,13 @@ void clientHandler::uploadFile() {
     }
 
     // recv file content in chunks
-    int remaining = filesize;
+    size_t remaining = filesize;
+
+    // std::cout << "remainning at start: " << remaining << std::endl;
     while (remaining > 0) {
         buffer.assign(BUFFER_SIZE, 0);
 
-        int chunkSize = std::min(remaining, BUFFER_SIZE);
+        size_t chunkSize = std::min(remaining, static_cast<size_t>(BUFFER_SIZE));
         bytesRecv = SSL_read(ssl, buffer.data(), chunkSize);
         if (bytesRecv <= 0) {
             clientInfo();
@@ -394,9 +397,23 @@ void clientHandler::uploadFile() {
         }
 
         remaining -= bytesRecv;
+
+        // std::cout << "remainning now: " << remaining << std::endl;
     }
 
+    // std::cout << "remainning at end: " << remaining << std::endl;
+
     gzclose(compressedfile);
+
+    // Wait for end-of-transfer marker
+    buffer.assign(BUFFER_SIZE, 0);
+    bytesRecv = SSL_read(ssl, buffer.data(), buffer.size());
+    if (bytesRecv <= 0 || std::string(buffer.data(), bytesRecv) != "UPLOAD_COMPLETE") {
+        clientInfo();
+        std::cerr << "Failed to receive end-of-transfer marker from client\n";
+        return;
+    }
+
     clientInfo();
     std::cout << "File received and saved to " << compressedFilepath << "\n";
 }
@@ -477,14 +494,24 @@ void clientHandler::downloadFile() {
         std::cerr << "Kernel TLS not enabled, falling back to read + SSL_write\n";
     }
 
-    //enable TCP_CORK
-    int cork_flag = 1;
+
+    // disable TCP_NODELAY
+    int nodelay_flag = 0;
     int server_fd;
     server_fd = SSL_get_fd(ssl);
-    if (setsockopt(server_fd, IPPROTO_TCP, TCP_CORK, &cork_flag, sizeof(cork_flag)) == -1) {
-        std::cerr << "Failed to enable TCP_CORK: " << std::strerror(errno) << "\n";
+    if (setsockopt(server_fd, IPPROTO_TCP, TCP_NODELAY, &nodelay_flag, sizeof(nodelay_flag)) == -1) {
+        std::cerr << "Failed to disable TCP_NODELAY: " << std::strerror(errno) << "\n";
     }
-    std::cout<<"Enabled TCP_CORK\n";
+    std::cout << "Disabled TCP_NODELAY\n";
+
+    // // enable TCP_CORK
+    // int cork_flag = 1;
+    // int server_fd;
+    // server_fd = SSL_get_fd(ssl);
+    // if (setsockopt(server_fd, IPPROTO_TCP, TCP_CORK, &cork_flag, sizeof(cork_flag)) == -1) {
+    //     std::cerr << "Failed to enable TCP_CORK: " << std::strerror(errno) << "\n";
+    // }
+    // std::cout << "Enabled TCP_CORK\n";
 
     // Send file in chunks
     off_t totalBytesSent = 0;
@@ -522,12 +549,17 @@ void clientHandler::downloadFile() {
 
     close(filefd);
 
-    //disable TCP_CORK
-    cork_flag = 0;
-    if (setsockopt(server_fd, IPPROTO_TCP, TCP_CORK, &cork_flag, sizeof(cork_flag)) == -1) {
-        std::cerr << "Failed to disable TCP_CORK: " << std::strerror(errno) << "\n";
+    nodelay_flag = 1;
+    if (setsockopt(server_fd, IPPROTO_TCP, TCP_NODELAY, &nodelay_flag, sizeof(nodelay_flag)) == -1) {
+        std::cerr << "Failed to enable TCP_NODELAY: " << std::strerror(errno) << "\n";
     }
-    std::cout<<"Disabled TCP_CORK\n";
+    std::cout << "Enabled TCP_NODELAY\n";
+    // // disable TCP_CORK
+    // cork_flag = 0;
+    // if (setsockopt(server_fd, IPPROTO_TCP, TCP_CORK, &cork_flag, sizeof(cork_flag)) == -1) {
+    //     std::cerr << "Failed to disable TCP_CORK: " << std::strerror(errno) << "\n";
+    // }
+    // std::cout << "Disabled TCP_CORK\n";
 }
 
 void clientHandler::renameFile() {

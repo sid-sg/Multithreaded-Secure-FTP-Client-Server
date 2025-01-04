@@ -332,24 +332,19 @@ void uploadFile(SSL *ssl) {
     }
     std::cout << "Disabled TCP_NODELAY (Enabled Nagle's algo)\n";
 
-    // // enable TCP_CORK
-    // int cork_flag = 1;
-    // if (setsockopt(client_fd, IPPROTO_TCP, TCP_CORK, &cork_flag, sizeof(cork_flag)) == -1) {
-    //     std::cerr << "Failed to enable TCP_CORK: " << std::strerror(errno) << "\n";
-    // }
-    // std::cout << "Enabled TCP_CORK\n";
-
     // inti progress bar
     const int totalSteps = 100;
     ProgressBar progressBar(totalSteps);
 
     // sendfile in chunks
     off_t totalBytesSent = 0;
-    off_t bytesRemaining = filesize;
+    size_t bytesRemaining = filesize;
     const size_t chunkSize = 65536;
 
     // start timer
     auto startTime = std::chrono::high_resolution_clock::now();
+
+    // std::cout << "bytesRemainning at start: " << bytesRemaining << std::endl;
     while (bytesRemaining > 0) {
         size_t toSend = std::min(static_cast<size_t>(bytesRemaining), chunkSize);
         ssize_t bytesSent = 0;
@@ -358,6 +353,7 @@ void uploadFile(SSL *ssl) {
             bytesSent = SSL_sendfile(ssl, filefd, totalBytesSent, toSend, 0);
         } else {
             std::vector<char> buffer(toSend);
+            buffer.clear();
             ssize_t readBytes = pread(filefd, buffer.data(), toSend, totalBytesSent);
             if (readBytes > 0) {
                 bytesSent = SSL_write(ssl, buffer.data(), readBytes);
@@ -374,23 +370,25 @@ void uploadFile(SSL *ssl) {
 
         bytesRemaining -= bytesSent;
 
+        // std::cout << "bytesRemainning now: " << bytesRemaining << std::endl;
         // update progress bar
         int progress = static_cast<int>((static_cast<double>(totalBytesSent) / filesize) * totalSteps);
         progressBar.update(std::min(progress, totalSteps));
+    }
+
+    // std::cout << "bytesRemainning at end: " << bytesRemaining << std::endl;
+    close(filefd);
+
+    const std::string completionSignal = "UPLOAD_COMPLETE";
+    if (SSL_write(ssl, completionSignal.c_str(), completionSignal.size()) <= 0) {
+        std::cerr << "Failed to send completion signal: " << std::strerror(errno) << "\n";
+        ERR_print_errors_fp(stderr);
     }
 
     auto endTime = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double> duration = endTime - startTime;
 
     std::cout << "\nFile sent and compressed successfully in " << duration.count() << " seconds\n";
-    close(filefd);
-
-    // // disable TCP_CORK
-    // cork_flag = 0;
-    // if (setsockopt(client_fd, IPPROTO_TCP, TCP_CORK, &cork_flag, sizeof(cork_flag)) == -1) {
-    //     std::cerr << "Failed to disable TCP_CORK: " << std::strerror(errno) << "\n";
-    // }
-    // std::cout << "Disabled TCP_CORK\n";
 
     // enable TCP_NODELAY
     nodelay_flag = 1;
@@ -453,7 +451,7 @@ void downloadFile(SSL *ssl) {
         return;
     }
 
-    int filesize = std::stoll(serverResponse);
+    off_t filesize = std::stoll(serverResponse);
     std::fill(recvBuffer.begin(), recvBuffer.end(), 0);
 
     bytesSent = SSL_write(ssl, "OK", 2);
