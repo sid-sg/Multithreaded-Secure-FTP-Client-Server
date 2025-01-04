@@ -337,7 +337,7 @@ void clientHandler::uploadFile() {
     // validate filesize
     int filesize = 0;
     try {
-        filesize = std::stoi(filesizeStr);
+        filesize = std::stoull(filesizeStr);
         if (filesize <= 0) {
             throw std::invalid_argument("Filesize must be positive");
         }

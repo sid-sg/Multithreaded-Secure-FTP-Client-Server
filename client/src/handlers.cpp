@@ -453,7 +453,7 @@ void downloadFile(SSL *ssl) {
         return;
     }
 
-    int filesize = std::stoi(serverResponse);
+    int filesize = std::stoll(serverResponse);
     std::fill(recvBuffer.begin(), recvBuffer.end(), 0);
 
     bytesSent = SSL_write(ssl, "OK", 2);
