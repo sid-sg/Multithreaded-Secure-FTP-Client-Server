@@ -4,6 +4,8 @@
 #include <openssl/bio.h>
 #include <signal.h>
 #include <sys/socket.h>
+
+#include <cstring>
 // #include <sys/stat.h>
 #include <sys/types.h>
 
@@ -115,7 +117,7 @@ int main(int argc, char* argv[]) {
         std::cerr << "Failed to set TCP_NODELAY: " << std::strerror(errno) << "\n";
     }
 
-    std::cout<<"Disabled Nagle's algorithm\n";
+    std::cout << "Disabled Nagle's algorithm\n";
 
     std::cout << "Server listening on port: " << PORT << "\n";
 

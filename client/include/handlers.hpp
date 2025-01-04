@@ -10,6 +10,8 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/types.h>
+
+#include <cstring>
 // #include <unistd.h>
 #include <zlib.h>
 

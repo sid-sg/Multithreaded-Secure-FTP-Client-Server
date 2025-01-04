@@ -8,6 +8,8 @@
 #include <openssl/ssl.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+
+#include <cstring>
 // #include <sys/sendfile.h>
 // #include <sys/stat.h>
 // #include <sys/types.h>
